@@ -71,6 +71,10 @@ td input{width:100px;text-align:center;}
       <input id="loginCnpj" placeholder="Somente números" inputmode="numeric">
       <label>Senha</label>
       <input id="loginSenha" type="password" placeholder="Sua senha">
+      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:14px;color:#374151;cursor:pointer;">
+        <input id="manterConectado" type="checkbox" checked style="width:auto;">
+        Manter conectado neste computador
+      </label>
       <div style="margin-top:16px;">
         <button onclick="entrar()">Entrar</button>
       </div>
@@ -173,7 +177,16 @@ const SUPABASE_ANON = "sb_publishable_ft9i2y31JJZitAsH66_9hg_jMTvuSH1";
 const DOMINIO = "postos.com.br"; // usado só internamente p/ transformar CNPJ em e-mail do Auth
 const LIMITE_BAIXO = 20;      // % considerado estoque baixo
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// Decide onde guardar a sessão:
+// - se o posto marcou "manter conectado" antes (lembrado abaixo), usa localStorage (continua logado)
+// - senão, usa sessionStorage (sai ao fechar a aba)
+const manter = localStorage.getItem("manterConectado") !== "nao";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: {
+    persistSession: true,
+    storage: manter ? window.localStorage : window.sessionStorage
+  }
+});
 
 let postoAtual = null;   // {id, cnpj, nome, ...}
 let tanques = [];
@@ -233,6 +246,16 @@ async function entrar(){
   const cnpj  = soNumeros($("loginCnpj").value);
   const senha = $("loginSenha").value;
   if(cnpj.length < 14) return msg($("msgAuth"),"Informe um CNPJ válido.","erro");
+
+  // grava a preferência de "manter conectado"
+  const quer = $("manterConectado").checked;
+  const jaSalvo = localStorage.getItem("manterConectado") !== "nao";
+  if(quer !== jaSalvo){
+    localStorage.setItem("manterConectado", quer ? "sim" : "nao");
+    msg($("msgAuth"), "Preferência ajustada. Clique em Entrar novamente.", "ok");
+    setTimeout(()=>location.reload(), 900);
+    return;
+  }
 
   const { error } = await sb.auth.signInWithPassword({
     email: cnpjToEmail(cnpj), password: senha
