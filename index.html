@@ -3,107 +3,175 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Estoque da Rede</title>
+<title>Rede Benedetti — Estoque</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --verde:#0a5c2e;
-  --verde-claro:#16a34a;
-  --bg:#eef3f7;
-  --alerta:#dc2626;
+  --preto:#15171a;
+  --preto-2:#1d2024;
+  --ouro:#e6b422;
+  --ouro-claro:#f4cf52;
+  --bg:#f1f3f5;
+  --card:#ffffff;
+  --linha:#e6e8eb;
+  --texto:#1d2024;
+  --texto-fraco:#6b7280;
+  /* cores de combustível (padrão bomba) */
+  --gasolina:#d52b2b;
+  --etanol:#16a34a;
+  --diesel:#6b7280;
+  --alerta:#d52b2b;
   --aviso:#d97706;
   --ok:#16a34a;
 }
 *{box-sizing:border-box;}
-body{font-family:"Segoe UI",Arial,sans-serif;background:var(--bg);margin:0;color:#1f2937;}
-header{background:var(--verde);color:white;padding:20px 25px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
-header h1{margin:0;font-size:20px;}
-header .who{font-size:14px;opacity:.9;}
-.container{max-width:1200px;margin:30px auto;background:white;padding:25px;border-radius:15px;box-shadow:0 5px 20px #ccc;}
-.auth{max-width:420px;}
-h2{color:var(--verde);margin-top:0;}
-label{display:block;font-size:13px;color:#6b7280;margin:12px 0 4px;}
-input,select{width:100%;padding:11px;border-radius:8px;border:1px solid #bbb;font-size:15px;}
-.form-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
-.form-row > div{flex:1;min-width:140px;}
-button{background:var(--verde);color:white;padding:12px 20px;border:0;border-radius:10px;cursor:pointer;font-size:15px;}
-button:hover{background:var(--verde-claro);}
-button.link{background:none;color:var(--verde);text-decoration:underline;padding:4px;}
-button.sec{background:#e5e7eb;color:#374151;}
-button.sec:hover{background:#d1d5db;}
+body{font-family:"Inter",system-ui,Arial,sans-serif;background:var(--bg);margin:0;color:var(--texto);-webkit-font-smoothing:antialiased;}
+.num{font-family:"Barlow Condensed","Inter",sans-serif;font-weight:600;letter-spacing:.3px;font-variant-numeric:tabular-nums;}
+
+/* ---------- cabeçalho ---------- */
+header{background:var(--preto);color:#fff;padding:0 22px;height:64px;display:flex;justify-content:space-between;align-items:center;gap:12px;}
+.brand{display:flex;align-items:center;gap:12px;}
+.logo-b{width:38px;height:38px;border:2px solid var(--ouro);border-radius:9px;display:flex;align-items:center;justify-content:center;
+  font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:24px;color:var(--ouro);line-height:1;}
+.brand .nome{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:21px;letter-spacing:1.5px;color:var(--ouro);text-transform:uppercase;}
+.brand .sub-nome{font-size:11px;letter-spacing:1px;color:#9aa0a6;text-transform:uppercase;display:block;margin-top:-2px;}
+.header-dir{display:flex;align-items:center;gap:14px;font-size:13px;color:#c4c8cc;}
+.header-dir b{color:#fff;font-weight:600;}
+
+/* ---------- estrutura ---------- */
+.wrap{max-width:1180px;margin:28px auto;padding:0 18px;}
+.painel{background:var(--card);border:1px solid var(--linha);border-radius:16px;padding:26px;}
+h2{font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:24px;letter-spacing:.5px;margin:0 0 4px;text-transform:uppercase;}
+.eyebrow{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--texto-fraco);font-weight:600;}
+
+/* ---------- inputs / botões ---------- */
+label.campo{display:block;font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--texto-fraco);font-weight:600;margin:14px 0 5px;}
+input,select{width:100%;padding:11px 13px;border-radius:9px;border:1px solid #cdd1d6;font-size:15px;font-family:inherit;background:#fff;}
+input:focus,select:focus{outline:none;border-color:var(--preto);box-shadow:0 0 0 3px rgba(21,23,26,.08);}
+button{font-family:inherit;font-weight:600;font-size:15px;border:0;border-radius:10px;padding:12px 20px;cursor:pointer;background:var(--preto);color:#fff;transition:.15s;}
+button:hover{background:#2c3036;}
+button.ouro{background:var(--ouro);color:var(--preto);}
+button.ouro:hover{background:var(--ouro-claro);}
+button.link{background:none;color:var(--preto);text-decoration:underline;padding:4px;font-weight:600;}
+button.sec{background:#2c3036;color:#fff;padding:9px 16px;font-size:13px;}
+button.sec:hover{background:#3a3f46;}
+button.voltar{background:#eceef0;color:var(--texto);padding:9px 16px;font-size:14px;}
+button.voltar:hover{background:#e0e3e6;}
+
+/* ---------- login ---------- */
+.tela-login{min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center;padding:24px;}
+.login-card{width:100%;max-width:410px;background:var(--card);border:1px solid var(--linha);border-radius:18px;padding:32px 30px;box-shadow:0 18px 50px -22px rgba(21,23,26,.3);}
+.login-marca{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:6px;}
+.login-marca .logo-b{width:46px;height:46px;font-size:28px;}
+.login-marca .nome{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:25px;letter-spacing:2px;color:var(--preto);text-transform:uppercase;}
+.login-tit{text-align:center;color:var(--texto-fraco);font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-bottom:22px;}
+.check{display:flex;align-items:center;gap:9px;margin-top:15px;font-size:14px;color:#374151;cursor:pointer;}
+.check input{width:auto;}
+.troca{margin-top:20px;font-size:14px;text-align:center;color:var(--texto-fraco);}
+
+/* ---------- form novo tanque ---------- */
+.form-tanque{display:grid;grid-template-columns:1.4fr 1fr .9fr .9fr auto;gap:12px;align-items:end;}
+.form-tanque label.campo{margin-top:0;}
+@media(max-width:760px){.form-tanque{grid-template-columns:1fr 1fr;}.form-tanque .full{grid-column:1/-1;}}
+
+/* ---------- tabela ---------- */
 table{width:100%;border-collapse:collapse;margin-top:20px;}
-th{background:var(--verde);color:white;padding:12px;font-size:14px;}
-td{border-bottom:1px solid #ddd;padding:10px;text-align:center;font-size:14px;}
-td input{width:100px;text-align:center;}
-.barra{height:10px;background:#e5e7eb;border-radius:6px;overflow:hidden;margin-top:6px;}
-.barra div{height:100%;transition:width .3s;}
-.pct{font-size:13px;color:#6b7280;}
-.del{background:#fee2e2;color:var(--alerta);padding:6px 12px;border-radius:8px;}
-.del:hover{background:#fecaca;}
-.cards{display:flex;gap:20px;flex-wrap:wrap;margin-top:25px;}
-.card{flex:1;min-width:200px;padding:18px;background:#f5fff7;border-left:8px solid var(--verde-claro);border-radius:15px;}
-.card h3{margin:0 0 6px;font-size:15px;}
-.valor{font-size:26px;font-weight:bold;}
-.sub{font-size:13px;color:#6b7280;}
-.vazio{text-align:center;color:#9ca3af;padding:30px;}
-.msg{padding:12px;border-radius:8px;margin:12px 0;font-size:14px;display:none;}
-.msg.erro{background:#fee2e2;color:#991b1b;display:block;}
-.msg.ok{background:#dcfce7;color:#166534;display:block;}
-.hidden{display:none;}
-.posto-grupo{margin-top:30px;}
-.posto-grupo h3{color:var(--verde);border-bottom:2px solid #e5e7eb;padding-bottom:6px;}
-.tag-baixo{background:#fee2e2;color:var(--alerta);font-size:12px;padding:2px 8px;border-radius:6px;margin-left:8px;}
-.toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
-.busca{max-width:280px;}
+th{text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--texto-fraco);font-weight:600;padding:10px 12px;border-bottom:2px solid var(--linha);}
+td{padding:12px;border-bottom:1px solid var(--linha);font-size:15px;vertical-align:middle;}
+td .num{font-size:17px;}
+td input{width:110px;}
+.pill{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:14px;}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+.barra{height:8px;background:#edeff1;border-radius:5px;overflow:hidden;width:120px;}
+.barra div{height:100%;border-radius:5px;transition:width .35s;}
+.del{background:#fdecec;color:var(--alerta);padding:7px 13px;font-size:13px;}
+.del:hover{background:#fbdada;}
+.vazio{text-align:center;color:#9aa0a6;padding:34px;font-size:15px;}
+
+/* ---------- cards de combustível (posto) ---------- */
+.cards-comb{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px;}
+@media(max-width:680px){.cards-comb{grid-template-columns:1fr;}}
+.cc{background:#fbfcfd;border:1px solid var(--linha);border-radius:14px;padding:18px 20px;border-left:6px solid var(--c);}
+.cc .rotulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--texto-fraco);text-transform:uppercase;letter-spacing:.5px;}
+.cc .valor{font-size:34px;color:var(--texto);margin-top:6px;}
+.cc .valor small{font-size:16px;color:var(--texto-fraco);font-weight:500;}
+.cc .meta{font-size:13px;color:var(--texto-fraco);margin-top:2px;}
+
+/* ---------- grade de postos (admin) ---------- */
+.grade-postos{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px;margin-top:8px;}
+.posto-card{background:var(--card);border:1px solid var(--linha);border-radius:16px;padding:20px;cursor:pointer;transition:.18s;position:relative;text-align:left;width:100%;color:inherit;font-family:inherit;}
+.posto-card:hover{border-color:var(--preto);transform:translateY(-2px);box-shadow:0 14px 30px -20px rgba(21,23,26,.4);}
+.posto-card .pc-nome{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:20px;letter-spacing:.4px;line-height:1.1;}
+.posto-card .pc-cidade{font-size:12.5px;color:var(--texto-fraco);margin-top:2px;}
+.pc-totais{display:flex;gap:8px;margin-top:16px;}
+.pc-t{flex:1;background:#fafbfc;border:1px solid var(--linha);border-radius:10px;padding:10px 8px;text-align:center;border-top:4px solid var(--c);}
+.pc-t .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--texto-fraco);font-weight:600;}
+.pc-t .v{font-size:20px;color:var(--texto);margin-top:3px;}
+.pc-t .v small{font-size:11px;color:var(--texto-fraco);}
+.flag-baixo{position:absolute;top:14px;right:14px;background:#fdecec;color:var(--alerta);font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:4px 9px;border-radius:20px;}
+.abrir{margin-top:14px;font-size:12.5px;color:var(--texto-fraco);font-weight:600;display:flex;align-items:center;gap:5px;}
+
+/* ---------- topo do detalhe (admin) ---------- */
+.detalhe-topo{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
+.detalhe-topo .tit{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:26px;letter-spacing:.5px;line-height:1;}
+.detalhe-topo .ci{font-size:13px;color:var(--texto-fraco);}
+
+.toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:4px;}
+.busca{max-width:300px;}
+.msg{padding:11px 14px;border-radius:9px;margin:12px 0;font-size:14px;display:none;}
+.msg.erro{background:#fdecec;color:#9a1f1f;display:block;}
+.msg.ok{background:#e6f6ec;color:#14633a;display:block;}
+.hidden{display:none!important;}
 </style>
 </head>
 <body>
 
-<!-- ====================== TELA DE LOGIN / CADASTRO ====================== -->
+<!-- ====================== LOGIN / CADASTRO ====================== -->
 <div id="telaAuth">
-  <header><h1>⛽ Estoque da Rede</h1></header>
-  <div class="container auth">
-    <div id="msgAuth" class="msg"></div>
-
-    <!-- LOGIN -->
-    <div id="boxLogin">
-      <h2>Entrar</h2>
-      <label>CNPJ do posto</label>
-      <input id="loginCnpj" placeholder="Somente números" inputmode="numeric">
-      <label>Senha</label>
-      <input id="loginSenha" type="password" placeholder="Sua senha">
-      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:14px;color:#374151;cursor:pointer;">
-        <input id="manterConectado" type="checkbox" checked style="width:auto;">
-        Manter conectado neste computador
-      </label>
-      <div style="margin-top:16px;">
-        <button onclick="entrar()">Entrar</button>
+  <div class="tela-login">
+    <div class="login-card">
+      <div class="login-marca">
+        <div class="logo-b">B</div>
+        <span class="nome">Rede Benedetti</span>
       </div>
-      <p style="margin-top:18px;font-size:14px;">
-        Ainda não tem cadastro?
-        <button class="link" onclick="trocarAuth('cad')">Cadastrar posto</button>
-      </p>
-    </div>
+      <div class="login-tit">Controle de Estoque</div>
 
-    <!-- CADASTRO -->
-    <div id="boxCad" class="hidden">
-      <h2>Cadastrar posto</h2>
-      <label>CNPJ do posto</label>
-      <input id="cadCnpj" placeholder="Somente números" inputmode="numeric">
-      <label>Nome do posto</label>
-      <input id="cadNome" placeholder="Ex: Posto Moderno - Centro">
-      <label>Cidade</label>
-      <input id="cadCidade" placeholder="Ex: Marília">
-      <label>Código da rede</label>
-      <input id="cadCodigo" placeholder="Fornecido pela administração">
-      <label>Senha</label>
-      <input id="cadSenha" type="password" placeholder="Crie uma senha (mín. 6 caracteres)">
-      <div style="margin-top:16px;">
-        <button onclick="cadastrar()">Cadastrar</button>
+      <div id="msgAuth" class="msg"></div>
+
+      <!-- LOGIN -->
+      <div id="boxLogin">
+        <label class="campo">CNPJ do posto</label>
+        <input id="loginCnpj" placeholder="Somente números" inputmode="numeric">
+        <label class="campo">Senha</label>
+        <input id="loginSenha" type="password" placeholder="Sua senha">
+        <label class="check"><input id="manterConectado" type="checkbox" checked> Manter conectado neste computador</label>
+        <div style="margin-top:18px;">
+          <button class="ouro" style="width:100%;" onclick="entrar()">Entrar</button>
+        </div>
+        <p class="troca">Ainda não tem cadastro?
+          <button class="link" onclick="trocarAuth('cad')">Cadastrar posto</button></p>
       </div>
-      <p style="margin-top:18px;font-size:14px;">
-        Já tem cadastro?
-        <button class="link" onclick="trocarAuth('login')">Entrar</button>
-      </p>
+
+      <!-- CADASTRO -->
+      <div id="boxCad" class="hidden">
+        <label class="campo">CNPJ do posto</label>
+        <input id="cadCnpj" placeholder="Somente números" inputmode="numeric">
+        <label class="campo">Nome do posto</label>
+        <input id="cadNome" placeholder="Ex: Posto Benedetti Centro">
+        <label class="campo">Cidade</label>
+        <input id="cadCidade" placeholder="Ex: Marília">
+        <label class="campo">Código da rede</label>
+        <input id="cadCodigo" placeholder="Fornecido pela administração">
+        <label class="campo">Senha</label>
+        <input id="cadSenha" type="password" placeholder="Mínimo 6 caracteres">
+        <div style="margin-top:18px;">
+          <button class="ouro" style="width:100%;" onclick="cadastrar()">Cadastrar posto</button>
+        </div>
+        <p class="troca">Já tem cadastro?
+          <button class="link" onclick="trocarAuth('login')">Entrar</button></p>
+      </div>
     </div>
   </div>
 </div>
@@ -111,40 +179,37 @@ td input{width:100px;text-align:center;}
 <!-- ====================== APP DO POSTO ====================== -->
 <div id="telaPosto" class="hidden">
   <header>
-    <h1>⛽ <span id="postoNome"></span></h1>
-    <div class="who">CNPJ <span id="postoCnpj"></span> &nbsp; <button class="sec" onclick="sair()">Sair</button></div>
-  </header>
-  <div class="container">
-    <div id="msgPosto" class="msg"></div>
-
-    <h2>Novo Tanque</h2>
-    <div class="form-row">
-      <div>
-        <label>Combustível</label>
-        <select id="comb">
-          <option>Gasolina Comum</option>
-          <option>Etanol</option>
-          <option>Diesel S10</option>
-        </select>
-      </div>
-      <div><label>Tanque</label><input id="num" placeholder="Ex: Tanque 1"></div>
-      <div><label>Capacidade (L)</label><input id="cap" type="number"></div>
-      <div><label>Estoque (L)</label><input id="est" type="number"></div>
-      <div style="flex:0;"><button onclick="adicionarTanque()">Adicionar</button></div>
+    <div class="brand">
+      <div class="logo-b">B</div>
+      <div><span class="nome">Rede Benedetti</span><span class="sub-nome" id="postoNome"></span></div>
     </div>
+    <div class="header-dir">CNPJ <b id="postoCnpj"></b> <button class="sec" onclick="sair()">Sair</button></div>
+  </header>
 
-    <table>
-      <thead><tr>
-        <th>Combustível</th><th>Tanque</th><th>Capacidade</th>
-        <th>Estoque Atual</th><th>Nível</th><th></th>
-      </tr></thead>
-      <tbody id="lista"></tbody>
-    </table>
+  <div class="wrap">
+    <div class="painel">
+      <div id="msgPosto" class="msg"></div>
+      <span class="eyebrow">Cadastro</span>
+      <h2>Novo tanque</h2>
+      <div class="form-tanque" style="margin-top:16px;">
+        <div><label class="campo">Combustível</label>
+          <select id="comb"><option>Gasolina Comum</option><option>Etanol</option><option>Diesel S10</option></select></div>
+        <div><label class="campo">Tanque</label><input id="num" placeholder="Ex: Tanque 1"></div>
+        <div><label class="campo">Capacidade (L)</label><input id="cap" type="number"></div>
+        <div><label class="campo">Estoque (L)</label><input id="est" type="number"></div>
+        <div><button class="ouro" onclick="adicionarTanque()">Adicionar</button></div>
+      </div>
 
-    <div class="cards">
-      <div class="card"><h3>Gasolina Comum</h3><div class="valor" id="gas">0 L</div><div class="sub" id="gasSub">—</div></div>
-      <div class="card"><h3>Etanol</h3><div class="valor" id="eta">0 L</div><div class="sub" id="etaSub">—</div></div>
-      <div class="card"><h3>Diesel S10</h3><div class="valor" id="die">0 L</div><div class="sub" id="dieSub">—</div></div>
+      <table>
+        <thead><tr><th>Combustível</th><th>Tanque</th><th>Capacidade</th><th>Estoque atual</th><th>Nível</th><th></th></tr></thead>
+        <tbody id="lista"></tbody>
+      </table>
+
+      <div class="cards-comb">
+        <div class="cc" style="--c:var(--gasolina)"><div class="rotulo"><span class="dot" style="background:var(--gasolina)"></span>Gasolina Comum</div><div class="valor num" id="gas">0 <small>L</small></div><div class="meta" id="gasSub">—</div></div>
+        <div class="cc" style="--c:var(--etanol)"><div class="rotulo"><span class="dot" style="background:var(--etanol)"></span>Etanol</div><div class="valor num" id="eta">0 <small>L</small></div><div class="meta" id="etaSub">—</div></div>
+        <div class="cc" style="--c:var(--diesel)"><div class="rotulo"><span class="dot" style="background:var(--diesel)"></span>Diesel S10</div><div class="valor num" id="die">0 <small>L</small></div><div class="meta" id="dieSub">—</div></div>
+      </div>
     </div>
   </div>
 </div>
@@ -152,52 +217,68 @@ td input{width:100px;text-align:center;}
 <!-- ====================== PAINEL ADMIN (COMPRAS) ====================== -->
 <div id="telaAdmin" class="hidden">
   <header>
-    <h1>📊 Setor de Compras — Rede</h1>
-    <div class="who"><button class="sec" onclick="recarregarAdmin()">Atualizar</button> <button class="sec" onclick="sair()">Sair</button></div>
-  </header>
-  <div class="container">
-    <div class="toolbar">
-      <h2>Estoque de todos os postos</h2>
-      <input id="buscaPosto" class="busca" placeholder="Filtrar por posto ou cidade" oninput="renderAdmin()">
+    <div class="brand">
+      <div class="logo-b">B</div>
+      <div><span class="nome">Rede Benedetti</span><span class="sub-nome">Setor de Compras</span></div>
     </div>
-    <p class="sub">Postos com algum tanque abaixo de 20% aparecem marcados.</p>
-    <div id="adminConteudo"></div>
+    <div class="header-dir"><button class="sec" onclick="recarregarAdmin()">Atualizar</button> <button class="sec" onclick="sair()">Sair</button></div>
+  </header>
+
+  <div class="wrap">
+    <!-- LISTA DE POSTOS -->
+    <div id="adminLista" class="painel">
+      <div class="toolbar">
+        <div><span class="eyebrow">Visão geral</span><h2>Postos da rede</h2></div>
+        <input id="buscaPosto" class="busca" placeholder="Filtrar por posto ou cidade" oninput="renderAdmin()">
+      </div>
+      <p class="sub" style="color:var(--texto-fraco);font-size:13px;margin:4px 0 20px;">Toque em um posto para ver o estoque completo. Postos com tanque abaixo de 20% aparecem marcados.</p>
+      <div id="gradePostos" class="grade-postos"></div>
+    </div>
+
+    <!-- DETALHE DE UM POSTO -->
+    <div id="adminDetalhe" class="painel hidden">
+      <div class="detalhe-topo">
+        <button class="voltar" onclick="voltarLista()">← Voltar</button>
+        <div><div class="tit" id="detNome"></div><div class="ci" id="detCidade"></div></div>
+      </div>
+      <div id="detCards" class="cards-comb"></div>
+      <table style="margin-top:26px;">
+        <thead><tr><th>Combustível</th><th>Tanque</th><th>Capacidade</th><th>Estoque</th><th>Nível</th><th>Atualizado</th></tr></thead>
+        <tbody id="detTabela"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ============================================================
-   CONFIGURAÇÃO — cole aqui as 2 chaves do seu projeto Supabase
-   (Settings > API: Project URL e a chave "anon public")
+   CONFIGURAÇÃO Supabase
    ============================================================ */
 const SUPABASE_URL  = "https://tsxsaheddhekmjmdzaph.supabase.co";
 const SUPABASE_ANON = "sb_publishable_ft9i2y31JJZitAsH66_9hg_jMTvuSH1";
 
-const DOMINIO = "postos.com.br"; // usado só internamente p/ transformar CNPJ em e-mail do Auth
-const LIMITE_BAIXO = 20;      // % considerado estoque baixo
+const DOMINIO = "postos.com.br";
+const LIMITE_BAIXO = 20;
 
-// Decide onde guardar a sessão:
-// - se o posto marcou "manter conectado" antes (lembrado abaixo), usa localStorage (continua logado)
-// - senão, usa sessionStorage (sai ao fechar a aba)
 const manter = localStorage.getItem("manterConectado") !== "nao";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
-  auth: {
-    persistSession: true,
-    storage: manter ? window.localStorage : window.sessionStorage
-  }
+  auth:{ persistSession:true, storage: manter ? window.localStorage : window.sessionStorage }
 });
 
-let postoAtual = null;   // {id, cnpj, nome, ...}
+let postoAtual = null;
 let tanques = [];
+let dadosAdmin = [];
 
 const $ = id => document.getElementById(id);
 const soNumeros = t => (t||"").replace(/\D/g,"");
 const cnpjToEmail = cnpj => soNumeros(cnpj) + "@" + DOMINIO;
+const fmt = n => Number(n).toLocaleString("pt-BR");
+
+const CORES = {"Gasolina Comum":"var(--gasolina)","Etanol":"var(--etanol)","Diesel S10":"var(--diesel)"};
 
 function msg(el, texto, tipo){
-  el.textContent = texto;
-  el.className = "msg " + tipo;
+  el.textContent = texto; el.className = "msg " + tipo;
   if(tipo==="ok") setTimeout(()=>{el.className="msg";}, 3000);
 }
 
@@ -209,69 +290,47 @@ function trocarAuth(qual){
 }
 
 async function cadastrar(){
-  const cnpj   = soNumeros($("cadCnpj").value);
-  const nome   = $("cadNome").value.trim();
-  const cidade = $("cadCidade").value.trim();
-  const codigo = $("cadCodigo").value.trim();
-  const senha  = $("cadSenha").value;
+  const cnpj=soNumeros($("cadCnpj").value), nome=$("cadNome").value.trim(),
+        cidade=$("cadCidade").value.trim(), codigo=$("cadCodigo").value.trim(), senha=$("cadSenha").value;
+  if(cnpj.length<14) return msg($("msgAuth"),"Informe um CNPJ válido (14 dígitos).","erro");
+  if(!nome)          return msg($("msgAuth"),"Informe o nome do posto.","erro");
+  if(!codigo)        return msg($("msgAuth"),"Informe o código da rede.","erro");
+  if(senha.length<6) return msg($("msgAuth"),"A senha precisa ter ao menos 6 caracteres.","erro");
 
-  if(cnpj.length < 14) return msg($("msgAuth"),"Informe um CNPJ válido (14 dígitos).","erro");
-  if(!nome)            return msg($("msgAuth"),"Informe o nome do posto.","erro");
-  if(!codigo)          return msg($("msgAuth"),"Informe o código da rede.","erro");
-  if(senha.length < 6) return msg($("msgAuth"),"A senha precisa ter ao menos 6 caracteres.","erro");
-
-  const { data, error } = await sb.auth.signUp({
-    email: cnpjToEmail(cnpj),
-    password: senha
-  });
+  const { error } = await sb.auth.signUp({ email:cnpjToEmail(cnpj), password:senha });
   if(error) return msg($("msgAuth"), traduzErro(error.message), "erro");
 
-  // cria o registro do posto validando o código da rede (no banco)
-  const { error: e2 } = await sb.rpc("cadastrar_posto", {
-    p_cnpj: cnpj, p_nome: nome, p_cidade: cidade, p_codigo: codigo
-  });
+  const { error:e2 } = await sb.rpc("cadastrar_posto",{ p_cnpj:cnpj, p_nome:nome, p_cidade:cidade, p_codigo:codigo });
   if(e2){
     await sb.auth.signOut();
-    if(/CODIGO_INVALIDO/.test(e2.message))
-      return msg($("msgAuth"), "Código da rede incorreto. Procure a administração.", "erro");
-    return msg($("msgAuth"), "Erro ao salvar os dados do posto: " + e2.message, "erro");
+    if(/CODIGO_INVALIDO/.test(e2.message)) return msg($("msgAuth"),"Código da rede incorreto. Procure a administração.","erro");
+    return msg($("msgAuth"),"Erro ao salvar os dados do posto: "+e2.message,"erro");
   }
-
-  msg($("msgAuth"), "Posto cadastrado! Faça login.", "ok");
-  trocarAuth("login");
-  $("loginCnpj").value = cnpj;
+  msg($("msgAuth"),"Posto cadastrado! Faça login.","ok");
+  trocarAuth("login"); $("loginCnpj").value=cnpj;
 }
 
 async function entrar(){
-  const cnpj  = soNumeros($("loginCnpj").value);
-  const senha = $("loginSenha").value;
-  if(cnpj.length < 14) return msg($("msgAuth"),"Informe um CNPJ válido.","erro");
+  const cnpj=soNumeros($("loginCnpj").value), senha=$("loginSenha").value;
+  if(cnpj.length<14) return msg($("msgAuth"),"Informe um CNPJ válido.","erro");
 
-  // grava a preferência de "manter conectado"
-  const quer = $("manterConectado").checked;
-  const jaSalvo = localStorage.getItem("manterConectado") !== "nao";
-  if(quer !== jaSalvo){
-    localStorage.setItem("manterConectado", quer ? "sim" : "nao");
-    msg($("msgAuth"), "Preferência ajustada. Clique em Entrar novamente.", "ok");
-    setTimeout(()=>location.reload(), 900);
-    return;
+  const quer=$("manterConectado").checked, jaSalvo=localStorage.getItem("manterConectado")!=="nao";
+  if(quer!==jaSalvo){
+    localStorage.setItem("manterConectado", quer?"sim":"nao");
+    msg($("msgAuth"),"Preferência ajustada. Clique em Entrar novamente.","ok");
+    setTimeout(()=>location.reload(),900); return;
   }
-
-  const { error } = await sb.auth.signInWithPassword({
-    email: cnpjToEmail(cnpj), password: senha
-  });
+  const { error } = await sb.auth.signInWithPassword({ email:cnpjToEmail(cnpj), password:senha });
   if(error) return msg($("msgAuth"), traduzErro(error.message), "erro");
   iniciarSessao();
 }
 
-async function sair(){
-  await sb.auth.signOut();
-  location.reload();
-}
+async function sair(){ await sb.auth.signOut(); location.reload(); }
 
 function traduzErro(m){
   if(/already registered/i.test(m)) return "Este CNPJ já está cadastrado.";
   if(/invalid login/i.test(m))      return "CNPJ ou senha incorretos.";
+  if(/signups.*disabled/i.test(m))  return "Cadastro desativado no servidor. Avise a administração.";
   return m;
 }
 
@@ -279,176 +338,155 @@ function traduzErro(m){
 async function iniciarSessao(){
   const { data:{ user } } = await sb.auth.getUser();
   if(!user){ mostrarTela("Auth"); return; }
-
-  const { data:perfil, error } = await sb.from("postos")
-    .select("*").eq("user_id", user.id).maybeSingle();
-
+  const { data:perfil, error } = await sb.from("postos").select("*").eq("user_id",user.id).maybeSingle();
   if(error || !perfil){ mostrarTela("Auth"); return; }
-
   postoAtual = perfil;
-
-  if(perfil.is_admin){
-    mostrarTela("Admin");
-    recarregarAdmin();
-  } else {
+  if(perfil.is_admin){ mostrarTela("Admin"); recarregarAdmin(); }
+  else {
     $("postoNome").textContent = perfil.nome;
     $("postoCnpj").textContent = perfil.cnpj;
-    mostrarTela("Posto");
-    carregarTanques();
+    mostrarTela("Posto"); carregarTanques();
   }
 }
-
-function mostrarTela(qual){
-  ["Auth","Posto","Admin"].forEach(t=>{
-    $("tela"+t).classList.toggle("hidden", t!==qual);
-  });
-}
+function mostrarTela(qual){ ["Auth","Posto","Admin"].forEach(t=>$("tela"+t).classList.toggle("hidden", t!==qual)); }
 
 /* ---------------- TANQUES (POSTO) ---------------- */
 async function carregarTanques(){
-  const { data, error } = await sb.from("tanques")
-    .select("*").eq("posto_id", postoAtual.id).order("combustivel");
+  const { data, error } = await sb.from("tanques").select("*").eq("posto_id",postoAtual.id).order("combustivel");
   if(error) return msg($("msgPosto"), error.message, "erro");
-  tanques = data || [];
-  renderTanques();
+  tanques = data || []; renderTanques();
 }
-
 async function adicionarTanque(){
-  const combustivel = $("comb").value;
-  const numero = $("num").value.trim();
-  const capacidade = Number($("cap").value);
-  const estoque = Number($("est").value) || 0;
-
-  if(!numero)            return msg($("msgPosto"),"Informe o número do tanque.","erro");
+  const combustivel=$("comb").value, numero=$("num").value.trim(),
+        capacidade=Number($("cap").value), estoque=Number($("est").value)||0;
+  if(!numero)                  return msg($("msgPosto"),"Informe o número do tanque.","erro");
   if(!capacidade||capacidade<=0) return msg($("msgPosto"),"Capacidade inválida.","erro");
-  if(estoque>capacidade) return msg($("msgPosto"),"Estoque não pode ser maior que a capacidade.","erro");
-
-  const { error } = await sb.from("tanques").insert({
-    posto_id: postoAtual.id, combustivel, numero, capacidade, estoque
-  });
+  if(estoque>capacidade)       return msg($("msgPosto"),"Estoque não pode ser maior que a capacidade.","erro");
+  const { error } = await sb.from("tanques").insert({ posto_id:postoAtual.id, combustivel, numero, capacidade, estoque });
   if(error) return msg($("msgPosto"), error.message, "erro");
-
-  $("num").value=""; $("cap").value=""; $("est").value="";
-  carregarTanques();
+  $("num").value=""; $("cap").value=""; $("est").value=""; carregarTanques();
 }
-
 async function atualizarEstoque(id, valor, cap){
-  let v = Number(valor);
-  if(v<0) v=0;
-  if(v>cap) v=cap;
-  const { error } = await sb.from("tanques")
-    .update({ estoque:v, atualizado_em:new Date().toISOString() })
-    .eq("id", id);
+  let v=Number(valor); if(v<0)v=0; if(v>cap)v=cap;
+  const { error } = await sb.from("tanques").update({ estoque:v, atualizado_em:new Date().toISOString() }).eq("id",id);
   if(error) return msg($("msgPosto"), error.message, "erro");
-  msg($("msgPosto"), "Estoque atualizado.", "ok");
-  carregarTanques();
+  msg($("msgPosto"),"Estoque atualizado.","ok"); carregarTanques();
 }
-
 async function removerTanque(id, nome){
   if(!confirm("Remover "+nome+"?")) return;
-  const { error } = await sb.from("tanques").delete().eq("id", id);
+  const { error } = await sb.from("tanques").delete().eq("id",id);
   if(error) return msg($("msgPosto"), error.message, "erro");
   carregarTanques();
 }
-
-function corNivel(pct){
-  if(pct<=LIMITE_BAIXO) return "var(--alerta)";
-  if(pct<=50) return "var(--aviso)";
-  return "var(--ok)";
-}
+function corNivel(pct){ if(pct<=LIMITE_BAIXO)return "var(--alerta)"; if(pct<=50)return "var(--aviso)"; return "var(--ok)"; }
 
 function renderTanques(){
-  let html = "";
-  if(tanques.length===0)
-    html = `<tr><td colspan="6" class="vazio">Nenhum tanque cadastrado ainda.</td></tr>`;
-
+  let html="";
+  if(tanques.length===0) html=`<tr><td colspan="6" class="vazio">Nenhum tanque cadastrado ainda. Adicione o primeiro acima.</td></tr>`;
   tanques.forEach(t=>{
-    const pct = Math.round((t.estoque/t.capacidade)*100);
-    html += `
-    <tr>
-      <td>${t.combustivel}</td>
+    const pct=Math.round((t.estoque/t.capacidade)*100), cor=CORES[t.combustivel]||"var(--diesel)";
+    html+=`<tr>
+      <td><span class="pill"><span class="dot" style="background:${cor}"></span>${t.combustivel}</span></td>
       <td>${t.numero}</td>
-      <td>${Number(t.capacidade).toLocaleString()} L</td>
-      <td><input type="number" value="${t.estoque}"
-            onchange="atualizarEstoque('${t.id}', this.value, ${t.capacidade})"> L</td>
-      <td><div class="pct">${pct}%</div>
+      <td class="num">${fmt(t.capacidade)} L</td>
+      <td><input type="number" class="num" value="${t.estoque}" onchange="atualizarEstoque('${t.id}', this.value, ${t.capacidade})"> L</td>
+      <td><div class="num" style="font-size:14px;color:var(--texto-fraco);margin-bottom:4px;">${pct}%</div>
           <div class="barra"><div style="width:${pct}%;background:${corNivel(pct)}"></div></div></td>
       <td><button class="del" onclick="removerTanque('${t.id}','${t.numero}')">Remover</button></td>
     </tr>`;
   });
-  $("lista").innerHTML = html;
-
-  const tot = {"Gasolina Comum":{e:0,c:0},"Etanol":{e:0,c:0},"Diesel S10":{e:0,c:0}};
+  $("lista").innerHTML=html;
+  const tot={"Gasolina Comum":{e:0,c:0},"Etanol":{e:0,c:0},"Diesel S10":{e:0,c:0}};
   tanques.forEach(t=>{ if(tot[t.combustivel]){ tot[t.combustivel].e+=Number(t.estoque); tot[t.combustivel].c+=Number(t.capacidade); }});
   resumo("gas","gasSub",tot["Gasolina Comum"]);
   resumo("eta","etaSub",tot["Etanol"]);
   resumo("die","dieSub",tot["Diesel S10"]);
 }
-
 function resumo(idVal,idSub,o){
-  $(idVal).textContent = o.e.toLocaleString()+" L";
-  const pct = o.c>0 ? Math.round((o.e/o.c)*100) : 0;
-  $(idSub).textContent = o.c>0 ? `${pct}% de ${o.c.toLocaleString()} L` : "—";
+  $(idVal).innerHTML = fmt(o.e)+' <small>L</small>';
+  const pct=o.c>0?Math.round((o.e/o.c)*100):0;
+  $(idSub).textContent = o.c>0 ? `${pct}% de ${fmt(o.c)} L` : "Sem tanque";
 }
 
-/* ---------------- PAINEL ADMIN ---------------- */
-let dadosAdmin = [];
-
+/* ---------------- ADMIN: LISTA E DETALHE ---------------- */
 async function recarregarAdmin(){
+  voltarLista();
   const { data:postos } = await sb.from("postos").select("*").eq("is_admin",false).order("nome");
   const { data:tks }    = await sb.from("tanques").select("*");
-  dadosAdmin = (postos||[]).map(p=>({
-    ...p,
-    tanques: (tks||[]).filter(t=>t.posto_id===p.id)
-  }));
+  dadosAdmin = (postos||[]).map(p=>({ ...p, tanques:(tks||[]).filter(t=>t.posto_id===p.id) }));
   renderAdmin();
 }
-
-function renderAdmin(){
-  const filtro = soTexto($("buscaPosto").value);
-  let html = "";
-
-  const lista = dadosAdmin.filter(p=>{
-    const alvo = soTexto((p.nome||"")+" "+(p.cidade||"")+" "+(p.cnpj||""));
-    return alvo.includes(filtro);
-  });
-
-  if(lista.length===0){ $("adminConteudo").innerHTML = `<p class="vazio">Nenhum posto encontrado.</p>`; return; }
-
-  lista.forEach(p=>{
-    const temBaixo = p.tanques.some(t=> (t.estoque/t.capacidade)*100 <= LIMITE_BAIXO);
-    html += `<div class="posto-grupo">
-      <h3>${p.nome} <span class="sub">— ${p.cidade||""} · CNPJ ${p.cnpj}</span>
-      ${temBaixo?'<span class="tag-baixo">estoque baixo</span>':''}</h3>`;
-
-    if(p.tanques.length===0){
-      html += `<p class="vazio">Sem tanques cadastrados.</p></div>`;
-      return;
-    }
-
-    html += `<table><thead><tr>
-      <th>Combustível</th><th>Tanque</th><th>Capacidade</th><th>Estoque</th><th>Nível</th><th>Atualizado</th>
-      </tr></thead><tbody>`;
-    p.tanques.forEach(t=>{
-      const pct = Math.round((t.estoque/t.capacidade)*100);
-      const data = t.atualizado_em ? new Date(t.atualizado_em).toLocaleString('pt-BR') : "—";
-      html += `<tr>
-        <td>${t.combustivel}</td><td>${t.numero}</td>
-        <td>${Number(t.capacidade).toLocaleString()} L</td>
-        <td>${Number(t.estoque).toLocaleString()} L</td>
-        <td><div class="pct">${pct}%</div>
-            <div class="barra"><div style="width:${pct}%;background:${corNivel(pct)}"></div></div></td>
-        <td class="sub">${data}</td>
-      </tr>`;
-    });
-    html += `</tbody></table></div>`;
-  });
-  $("adminConteudo").innerHTML = html;
+function totaisPosto(p){
+  const t={"Gasolina Comum":0,"Etanol":0,"Diesel S10":0};
+  p.tanques.forEach(k=>{ if(t[k.combustivel]!==undefined) t[k.combustivel]+=Number(k.estoque); });
+  return t;
 }
-
+function temBaixo(p){ return p.tanques.some(t=> (t.estoque/t.capacidade)*100 <= LIMITE_BAIXO); }
 function soTexto(t){ return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
 
-/* ---------------- INICIALIZAÇÃO ---------------- */
+function renderAdmin(){
+  const filtro=soTexto($("buscaPosto").value);
+  const lista=dadosAdmin.filter(p=>soTexto((p.nome||"")+" "+(p.cidade||"")+" "+(p.cnpj||"")).includes(filtro));
+  if(lista.length===0){ $("gradePostos").innerHTML=`<p class="vazio">Nenhum posto encontrado.</p>`; return; }
+  let html="";
+  lista.forEach(p=>{
+    const t=totaisPosto(p);
+    html+=`<button class="posto-card" onclick="abrirPosto('${p.id}')">
+      ${temBaixo(p)?'<span class="flag-baixo">Estoque baixo</span>':''}
+      <div class="pc-nome">${p.nome}</div>
+      <div class="pc-cidade">${p.cidade||"—"} · CNPJ ${p.cnpj}</div>
+      <div class="pc-totais">
+        <div class="pc-t" style="--c:var(--gasolina)"><div class="l">Gasolina</div><div class="v num">${fmt(t["Gasolina Comum"])}<small> L</small></div></div>
+        <div class="pc-t" style="--c:var(--etanol)"><div class="l">Etanol</div><div class="v num">${fmt(t["Etanol"])}<small> L</small></div></div>
+        <div class="pc-t" style="--c:var(--diesel)"><div class="l">Diesel</div><div class="v num">${fmt(t["Diesel S10"])}<small> L</small></div></div>
+      </div>
+      <div class="abrir">Ver estoque completo →</div>
+    </button>`;
+  });
+  $("gradePostos").innerHTML=html;
+}
+
+function abrirPosto(id){
+  const p=dadosAdmin.find(x=>x.id===id); if(!p) return;
+  $("detNome").textContent=p.nome;
+  $("detCidade").textContent=(p.cidade||"—")+" · CNPJ "+p.cnpj;
+
+  const t=totaisPosto(p);
+  const capT={"Gasolina Comum":0,"Etanol":0,"Diesel S10":0};
+  p.tanques.forEach(k=>{ if(capT[k.combustivel]!==undefined) capT[k.combustivel]+=Number(k.capacidade); });
+  const cc=(nome,cor)=>{
+    const pct=capT[nome]>0?Math.round((t[nome]/capT[nome])*100):0;
+    return `<div class="cc" style="--c:${cor}"><div class="rotulo"><span class="dot" style="background:${cor}"></span>${nome}</div>
+      <div class="valor num">${fmt(t[nome])} <small>L</small></div>
+      <div class="meta">${capT[nome]>0?pct+"% de "+fmt(capT[nome])+" L":"Sem tanque"}</div></div>`;
+  };
+  $("detCards").innerHTML = cc("Gasolina Comum","var(--gasolina)")+cc("Etanol","var(--etanol)")+cc("Diesel S10","var(--diesel)");
+
+  let linhas="";
+  if(p.tanques.length===0) linhas=`<tr><td colspan="6" class="vazio">Este posto ainda não cadastrou tanques.</td></tr>`;
+  p.tanques.forEach(k=>{
+    const pct=Math.round((k.estoque/k.capacidade)*100), cor=CORES[k.combustivel]||"var(--diesel)";
+    const data=k.atualizado_em?new Date(k.atualizado_em).toLocaleString("pt-BR"):"—";
+    linhas+=`<tr>
+      <td><span class="pill"><span class="dot" style="background:${cor}"></span>${k.combustivel}</span></td>
+      <td>${k.numero}</td><td class="num">${fmt(k.capacidade)} L</td><td class="num">${fmt(k.estoque)} L</td>
+      <td><div class="num" style="font-size:14px;color:var(--texto-fraco);margin-bottom:4px;">${pct}%</div>
+          <div class="barra"><div style="width:${pct}%;background:${corNivel(pct)}"></div></div></td>
+      <td style="font-size:13px;color:var(--texto-fraco);">${data}</td>
+    </tr>`;
+  });
+  $("detTabela").innerHTML=linhas;
+
+  $("adminLista").classList.add("hidden");
+  $("adminDetalhe").classList.remove("hidden");
+  window.scrollTo(0,0);
+}
+function voltarLista(){
+  $("adminDetalhe").classList.add("hidden");
+  $("adminLista").classList.remove("hidden");
+}
+
+/* ---------------- INÍCIO ---------------- */
 iniciarSessao();
 </script>
 </body>
