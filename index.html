@@ -277,6 +277,12 @@ const fmt = n => Number(n).toLocaleString("pt-BR");
 
 const CORES = {"Gasolina Comum":"var(--gasolina)","Etanol":"var(--etanol)","Diesel S10":"var(--diesel)"};
 
+// ordena tanques pela ordem numérica do nº do tanque (1,2,3...10), independente do texto
+function ordenarTanques(arr){
+  const n = t => { const m=(t.numero||"").match(/\d+/); return m?parseInt(m[0],10):Number.MAX_SAFE_INTEGER; };
+  return [...arr].sort((a,b)=> n(a)-n(b) || (a.numero||"").localeCompare(b.numero||"","pt"));
+}
+
 function msg(el, texto, tipo){
   el.textContent = texto; el.className = "msg " + tipo;
   if(tipo==="ok") setTimeout(()=>{el.className="msg";}, 3000);
@@ -354,7 +360,7 @@ function mostrarTela(qual){ ["Auth","Posto","Admin"].forEach(t=>$("tela"+t).clas
 async function carregarTanques(){
   const { data, error } = await sb.from("tanques").select("*").eq("posto_id",postoAtual.id).order("combustivel");
   if(error) return msg($("msgPosto"), error.message, "erro");
-  tanques = data || []; renderTanques();
+  tanques = ordenarTanques(data || []); renderTanques();
 }
 async function adicionarTanque(){
   const combustivel=$("comb").value, numero=$("num").value.trim(),
@@ -463,8 +469,9 @@ function abrirPosto(id){
   $("detCards").innerHTML = cc("Gasolina Comum","var(--gasolina)")+cc("Etanol","var(--etanol)")+cc("Diesel S10","var(--diesel)");
 
   let linhas="";
-  if(p.tanques.length===0) linhas=`<tr><td colspan="6" class="vazio">Este posto ainda não cadastrou tanques.</td></tr>`;
-  p.tanques.forEach(k=>{
+  const tanquesOrdenados = ordenarTanques(p.tanques);
+  if(tanquesOrdenados.length===0) linhas=`<tr><td colspan="6" class="vazio">Este posto ainda não cadastrou tanques.</td></tr>`;
+  tanquesOrdenados.forEach(k=>{
     const pct=Math.round((k.estoque/k.capacidade)*100), cor=CORES[k.combustivel]||"var(--diesel)";
     const data=k.atualizado_em?new Date(k.atualizado_em).toLocaleString("pt-BR"):"—";
     linhas+=`<tr>
