@@ -222,6 +222,42 @@ td input{width:110px;}
         <div class="cc" style="--c:var(--diesel)"><div class="rotulo"><span class="dot" style="background:var(--diesel)"></span>Diesel S10</div><div class="valor num" id="die">0 <small>L</small></div><div class="meta" id="dieSub">—</div></div>
       </div>
     </div>
+
+    <!-- ============ RECEBIMENTO DE COMBUSTÍVEL ============ -->
+    <div class="painel" style="margin-top:22px;">
+      <div id="msgReceb" class="msg"></div>
+      <span class="eyebrow">Entrada de combustível</span>
+      <h2>Receber combustível</h2>
+      <p style="color:var(--texto-fraco);font-size:13px;margin:4px 0 16px;">Lance o volume total recebido por combustível e o número da nota fiscal. Não precisa separar por tanque.</p>
+      <div class="form-tanque" style="margin-top:6px;">
+        <div><label class="campo">Combustível</label>
+          <select id="recComb"><option>Gasolina Comum</option><option>Etanol</option><option>Diesel S10</option></select></div>
+        <div><label class="campo">Volume recebido (L)</label><input id="recVol" type="number" placeholder="Ex: 10000"></div>
+        <div><label class="campo">Nº da nota fiscal</label><input id="recNota" placeholder="Ex: 123456"></div>
+        <div><label class="campo">Data</label><input id="recData" type="date"></div>
+        <div><button class="ouro" onclick="adicionarRecebimento()">Lançar</button></div>
+      </div>
+      <table>
+        <thead><tr><th>Data</th><th>Combustível</th><th>Volume</th><th>Nota fiscal</th><th></th></tr></thead>
+        <tbody id="listaReceb"></tbody>
+      </table>
+    </div>
+
+    <!-- ============ RELATÓRIO DE CONFERÊNCIA ============ -->
+    <div class="painel" style="margin-top:22px;">
+      <span class="eyebrow">Conferência</span>
+      <h2>Relatório de conferência</h2>
+      <p style="color:var(--texto-fraco);font-size:13px;margin:4px 0 16px;">Compara, por combustível, o quanto o estoque subiu (entradas registradas) com o que foi lançado como recebimento. Assim você enxerga recebimentos confirmados e possíveis erros.</p>
+      <div class="form-tanque" style="grid-template-columns:1fr 1fr auto;margin-bottom:6px;">
+        <div><label class="campo">De</label><input id="confDe" type="date"></div>
+        <div><label class="campo">Até</label><input id="confAte" type="date"></div>
+        <div><button class="ouro" onclick="gerarConferencia()">Gerar</button></div>
+      </div>
+      <table>
+        <thead><tr><th>Combustível</th><th>Estoque subiu</th><th>Notas lançadas</th><th>Diferença</th><th>Situação</th></tr></thead>
+        <tbody id="listaConf"><tr><td colspan="5" class="vazio">Escolha o período e clique em Gerar.</td></tr></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -258,6 +294,16 @@ td input{width:110px;}
         <span class="eyebrow">Vendas (saídas de estoque)</span>
         <h2 style="margin-bottom:14px;">Hoje e ontem</h2>
         <div id="detVendas" class="cards-vendas"></div>
+      </div>
+
+      <div style="margin-top:26px;">
+        <span class="eyebrow">Recebimentos a conferir</span>
+        <h2 style="margin-bottom:6px;">Notas pendentes de baixa</h2>
+        <p style="color:var(--texto-fraco);font-size:13px;margin:0 0 14px;">Notas lançadas por este posto. Ao dar baixa, a nota some daqui (fica registrada como conferida).</p>
+        <table>
+          <thead><tr><th>Data</th><th>Combustível</th><th>Volume</th><th>Nota fiscal</th><th></th></tr></thead>
+          <tbody id="detReceb"></tbody>
+        </table>
       </div>
 
       <table style="margin-top:26px;">
@@ -379,6 +425,13 @@ async function carregarTanques(){
   const { data, error } = await sb.from("tanques").select("*").eq("posto_id",postoAtual.id).order("combustivel");
   if(error) return msg($("msgPosto"), error.message, "erro");
   tanques = ordenarTanques(data || []); renderTanques();
+  // recebimentos + datas padrão da conferência
+  if($("recData") && !$("recData").value) $("recData").value = hojeISO();
+  if($("confAte") && !$("confAte").value){
+    const d=new Date(); $("confAte").value=hojeISO();
+    d.setDate(d.getDate()-7); $("confDe").value=d.toISOString().slice(0,10);
+  }
+  carregarRecebimentos();
 }
 async function adicionarTanque(){
   const combustivel=$("comb").value, numero=$("num").value.trim(),
@@ -412,6 +465,124 @@ async function removerTanque(id, nome){
   carregarTanques();
 }
 function corNivel(pct){ if(pct<=LIMITE_BAIXO)return "var(--alerta)"; if(pct<=50)return "var(--aviso)"; return "var(--ok)"; }
+
+/* ---------------- RECEBIMENTO DE COMBUSTÍVEL ---------------- */
+let recebimentos = [];
+function hojeISO(){ return new Date().toISOString().slice(0,10); }
+
+async function carregarRecebimentos(){
+  const { data, error } = await sb.from("recebimentos")
+    .select("*").eq("posto_id",postoAtual.id).order("data",{ascending:false});
+  if(error){ if(error.code!=="42P01") msg($("msgReceb"), error.message, "erro"); return; }
+  recebimentos = data || [];
+  renderRecebimentos();
+}
+function renderRecebimentos(){
+  let html="";
+  if(recebimentos.length===0) html=`<tr><td colspan="5" class="vazio">Nenhum recebimento lançado ainda.</td></tr>`;
+  recebimentos.forEach(r=>{
+    const cor=CORES[r.combustivel]||"var(--diesel)";
+    const dataBR = r.data ? new Date(r.data+"T00:00").toLocaleDateString("pt-BR") : "—";
+    html+=`<tr>
+      <td>${dataBR}</td>
+      <td><span class="pill"><span class="dot" style="background:${cor}"></span>${r.combustivel}</span></td>
+      <td class="num">${fmt(r.volume)} L</td>
+      <td>${r.nota_fiscal||"—"}</td>
+      <td><button class="del" onclick="removerRecebimento('${r.id}')">Remover</button></td>
+    </tr>`;
+  });
+  $("listaReceb").innerHTML=html;
+}
+async function adicionarRecebimento(){
+  const combustivel=$("recComb").value;
+  const volume=Number($("recVol").value);
+  const nota_fiscal=$("recNota").value.trim();
+  const data=$("recData").value || hojeISO();
+  if(!volume||volume<=0) return msg($("msgReceb"),"Informe um volume válido.","erro");
+  if(!nota_fiscal)        return msg($("msgReceb"),"Informe o número da nota fiscal.","erro");
+  const { error } = await sb.from("recebimentos").insert({
+    posto_id:postoAtual.id, combustivel, volume, nota_fiscal, data
+  });
+  if(error) return msg($("msgReceb"), error.message, "erro");
+  $("recVol").value=""; $("recNota").value="";
+  msg($("msgReceb"),"Recebimento lançado.","ok");
+  carregarRecebimentos();
+}
+async function removerRecebimento(id){
+  if(!confirm("Remover este recebimento?")) return;
+  const { error } = await sb.from("recebimentos").delete().eq("id",id);
+  if(error) return msg($("msgReceb"), error.message, "erro");
+  carregarRecebimentos();
+}
+
+/* ---------------- RELATÓRIO DE CONFERÊNCIA ---------------- */
+async function gerarConferencia(){
+  const de  = $("confDe").value;
+  const ate = $("confAte").value;
+  if(!de||!ate){ $("listaConf").innerHTML=`<tr><td colspan="5" class="vazio">Escolha as duas datas.</td></tr>`; return; }
+  $("listaConf").innerHTML=`<tr><td colspan="5" class="vazio">Calculando...</td></tr>`;
+
+  // limites do período (inclui o dia inteiro de "ate")
+  const ini = de+"T00:00:00";
+  const fim = ate+"T23:59:59";
+
+  // histórico do posto no período
+  const { data:hist, error:eh } = await sb.from("historico_estoque")
+    .select("*").eq("posto_id",postoAtual.id)
+    .gte("registrado_em",ini).lte("registrado_em",fim)
+    .order("registrado_em",{ascending:true});
+  if(eh){ $("listaConf").innerHTML=`<tr><td colspan="5" class="vazio">Erro ao ler histórico: ${eh.message}</td></tr>`; return; }
+
+  // recebimentos do posto no período
+  const { data:recs, error:er } = await sb.from("recebimentos")
+    .select("*").eq("posto_id",postoAtual.id)
+    .gte("data",de).lte("data",ate);
+  if(er && er.code!=="42P01"){ $("listaConf").innerHTML=`<tr><td colspan="5" class="vazio">Erro ao ler recebimentos: ${er.message}</td></tr>`; return; }
+
+  // soma de SUBIDAS de estoque por combustível (entradas registradas no histórico)
+  // regra: percorre cada tanque em ordem de tempo e soma só as variações positivas
+  const subiuPorComb={}, porTanque={};
+  (hist||[]).forEach(h=>{
+    (porTanque[h.tanque_id]=porTanque[h.tanque_id]||[]).push(h);
+  });
+  Object.values(porTanque).forEach(lista=>{
+    lista.sort((a,b)=>a.registrado_em.localeCompare(b.registrado_em));
+    for(let i=1;i<lista.length;i++){
+      const dif=Number(lista[i].estoque)-Number(lista[i-1].estoque);
+      if(dif>0){
+        const c=lista[i].combustivel;
+        subiuPorComb[c]=(subiuPorComb[c]||0)+dif;
+      }
+    }
+  });
+
+  // soma de notas por combustível
+  const notaPorComb={};
+  (recs||[]).forEach(r=>{ notaPorComb[r.combustivel]=(notaPorComb[r.combustivel]||0)+Number(r.volume); });
+
+  const combs=["Gasolina Comum","Etanol","Diesel S10"];
+  let html="";
+  combs.forEach(c=>{
+    const subiu=Math.round(subiuPorComb[c]||0);
+    const nota =Math.round(notaPorComb[c]||0);
+    const dif  =subiu-nota;
+    const cor=CORES[c]||"var(--diesel)";
+    // tolerância de 100 L para diferenças pequenas de leitura
+    let situacao, corSit;
+    if(subiu===0 && nota===0){ situacao="Sem movimento"; corSit="var(--texto-fraco)"; }
+    else if(Math.abs(dif)<=100){ situacao="✅ Confere com a nota"; corSit="var(--ok)"; }
+    else if(dif>100){ situacao="🟡 Subiu mais que a nota (correção?)"; corSit="var(--aviso)"; }
+    else { situacao="🔴 Nota sem entrada no estoque"; corSit="var(--alerta)"; }
+    html+=`<tr>
+      <td><span class="pill"><span class="dot" style="background:${cor}"></span>${c}</span></td>
+      <td class="num">${fmt(subiu)} L</td>
+      <td class="num">${fmt(nota)} L</td>
+      <td class="num" style="color:${corSit}">${dif>0?"+":""}${fmt(dif)} L</td>
+      <td style="font-weight:600;color:${corSit}">${situacao}</td>
+    </tr>`;
+  });
+  $("listaConf").innerHTML=html;
+}
 
 function renderTanques(){
   let html="";
@@ -529,9 +700,50 @@ async function abrirPosto(id){
   });
   $("detTabela").innerHTML=linhas;
 
+  // recebimentos pendentes deste posto
+  carregarRecebPendentes(p.id);
+
   $("adminLista").classList.add("hidden");
   $("adminDetalhe").classList.remove("hidden");
   window.scrollTo(0,0);
+}
+
+/* ---- recebimentos pendentes (admin / compras) ---- */
+let postoDetalheId = null;
+async function carregarRecebPendentes(postoId){
+  postoDetalheId = postoId;
+  const tb=$("detReceb");
+  tb.innerHTML=`<tr><td colspan="5" class="vazio">Carregando...</td></tr>`;
+  const { data, error } = await sb.from("recebimentos")
+    .select("*").eq("posto_id",postoId).eq("conferido",false)
+    .order("data",{ascending:false});
+  if(error){
+    tb.innerHTML=`<tr><td colspan="5" class="vazio">${error.code==="42P01"?"Rode o SQL de recebimentos primeiro.":error.message}</td></tr>`;
+    return;
+  }
+  if(!data || data.length===0){
+    tb.innerHTML=`<tr><td colspan="5" class="vazio">Nenhuma nota pendente. Tudo conferido. ✅</td></tr>`;
+    return;
+  }
+  let html="";
+  data.forEach(r=>{
+    const cor=CORES[r.combustivel]||"var(--diesel)";
+    const dataBR = r.data ? new Date(r.data+"T00:00").toLocaleDateString("pt-BR") : "—";
+    html+=`<tr>
+      <td>${dataBR}</td>
+      <td><span class="pill"><span class="dot" style="background:${cor}"></span>${r.combustivel}</span></td>
+      <td class="num">${fmt(r.volume)} L</td>
+      <td>${r.nota_fiscal||"—"}</td>
+      <td><button class="ouro" onclick="darBaixaReceb('${r.id}')">Dar baixa</button></td>
+    </tr>`;
+  });
+  tb.innerHTML=html;
+}
+async function darBaixaReceb(id){
+  if(!confirm("Confirmar baixa desta nota? Ela sairá da lista de pendentes.")) return;
+  const { error } = await sb.from("recebimentos").update({ conferido:true }).eq("id",id);
+  if(error){ alert("Erro ao dar baixa: "+error.message); return; }
+  if(postoDetalheId) carregarRecebPendentes(postoDetalheId);
 }
 function voltarLista(){
   $("adminDetalhe").classList.add("hidden");
