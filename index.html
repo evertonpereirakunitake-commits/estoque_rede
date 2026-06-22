@@ -243,21 +243,6 @@ td input{width:110px;}
       </table>
     </div>
 
-    <!-- ============ RELATÓRIO DE CONFERÊNCIA ============ -->
-    <div class="painel" style="margin-top:22px;">
-      <span class="eyebrow">Conferência</span>
-      <h2>Relatório de conferência</h2>
-      <p style="color:var(--texto-fraco);font-size:13px;margin:4px 0 16px;">Compara, por combustível, o quanto o estoque subiu (entradas registradas) com o que foi lançado como recebimento. Assim você enxerga recebimentos confirmados e possíveis erros.</p>
-      <div class="form-tanque" style="grid-template-columns:1fr 1fr auto;margin-bottom:6px;">
-        <div><label class="campo">De</label><input id="confDe" type="date"></div>
-        <div><label class="campo">Até</label><input id="confAte" type="date"></div>
-        <div><button class="ouro" onclick="gerarConferencia()">Gerar</button></div>
-      </div>
-      <table>
-        <thead><tr><th>Combustível</th><th>Estoque subiu</th><th>Notas lançadas</th><th>Diferença</th><th>Situação</th></tr></thead>
-        <tbody id="listaConf"><tr><td colspan="5" class="vazio">Escolha o período e clique em Gerar.</td></tr></tbody>
-      </table>
-    </div>
   </div>
 </div>
 
@@ -425,12 +410,8 @@ async function carregarTanques(){
   const { data, error } = await sb.from("tanques").select("*").eq("posto_id",postoAtual.id).order("combustivel");
   if(error) return msg($("msgPosto"), error.message, "erro");
   tanques = ordenarTanques(data || []); renderTanques();
-  // recebimentos + datas padrão da conferência
+  // recebimentos + data padrão do lançamento
   if($("recData") && !$("recData").value) $("recData").value = hojeISO();
-  if($("confAte") && !$("confAte").value){
-    const d=new Date(); $("confAte").value=hojeISO();
-    d.setDate(d.getDate()-7); $("confDe").value=d.toISOString().slice(0,10);
-  }
   carregarRecebimentos();
 }
 async function adicionarTanque(){
@@ -515,74 +496,6 @@ async function removerRecebimento(id){
   carregarRecebimentos();
 }
 
-/* ---------------- RELATÓRIO DE CONFERÊNCIA ---------------- */
-async function gerarConferencia(){
-  const de  = $("confDe").value;
-  const ate = $("confAte").value;
-  if(!de||!ate){ $("listaConf").innerHTML=`<tr><td colspan="5" class="vazio">Escolha as duas datas.</td></tr>`; return; }
-  $("listaConf").innerHTML=`<tr><td colspan="5" class="vazio">Calculando...</td></tr>`;
-
-  // limites do período (inclui o dia inteiro de "ate")
-  const ini = de+"T00:00:00";
-  const fim = ate+"T23:59:59";
-
-  // histórico do posto no período
-  const { data:hist, error:eh } = await sb.from("historico_estoque")
-    .select("*").eq("posto_id",postoAtual.id)
-    .gte("registrado_em",ini).lte("registrado_em",fim)
-    .order("registrado_em",{ascending:true});
-  if(eh){ $("listaConf").innerHTML=`<tr><td colspan="5" class="vazio">Erro ao ler histórico: ${eh.message}</td></tr>`; return; }
-
-  // recebimentos do posto no período
-  const { data:recs, error:er } = await sb.from("recebimentos")
-    .select("*").eq("posto_id",postoAtual.id)
-    .gte("data",de).lte("data",ate);
-  if(er && er.code!=="42P01"){ $("listaConf").innerHTML=`<tr><td colspan="5" class="vazio">Erro ao ler recebimentos: ${er.message}</td></tr>`; return; }
-
-  // soma de SUBIDAS de estoque por combustível (entradas registradas no histórico)
-  // regra: percorre cada tanque em ordem de tempo e soma só as variações positivas
-  const subiuPorComb={}, porTanque={};
-  (hist||[]).forEach(h=>{
-    (porTanque[h.tanque_id]=porTanque[h.tanque_id]||[]).push(h);
-  });
-  Object.values(porTanque).forEach(lista=>{
-    lista.sort((a,b)=>a.registrado_em.localeCompare(b.registrado_em));
-    for(let i=1;i<lista.length;i++){
-      const dif=Number(lista[i].estoque)-Number(lista[i-1].estoque);
-      if(dif>0){
-        const c=lista[i].combustivel;
-        subiuPorComb[c]=(subiuPorComb[c]||0)+dif;
-      }
-    }
-  });
-
-  // soma de notas por combustível
-  const notaPorComb={};
-  (recs||[]).forEach(r=>{ notaPorComb[r.combustivel]=(notaPorComb[r.combustivel]||0)+Number(r.volume); });
-
-  const combs=["Gasolina Comum","Etanol","Diesel S10"];
-  let html="";
-  combs.forEach(c=>{
-    const subiu=Math.round(subiuPorComb[c]||0);
-    const nota =Math.round(notaPorComb[c]||0);
-    const dif  =subiu-nota;
-    const cor=CORES[c]||"var(--diesel)";
-    // tolerância de 100 L para diferenças pequenas de leitura
-    let situacao, corSit;
-    if(subiu===0 && nota===0){ situacao="Sem movimento"; corSit="var(--texto-fraco)"; }
-    else if(Math.abs(dif)<=100){ situacao="✅ Confere com a nota"; corSit="var(--ok)"; }
-    else if(dif>100){ situacao="🟡 Subiu mais que a nota (correção?)"; corSit="var(--aviso)"; }
-    else { situacao="🔴 Nota sem entrada no estoque"; corSit="var(--alerta)"; }
-    html+=`<tr>
-      <td><span class="pill"><span class="dot" style="background:${cor}"></span>${c}</span></td>
-      <td class="num">${fmt(subiu)} L</td>
-      <td class="num">${fmt(nota)} L</td>
-      <td class="num" style="color:${corSit}">${dif>0?"+":""}${fmt(dif)} L</td>
-      <td style="font-weight:600;color:${corSit}">${situacao}</td>
-    </tr>`;
-  });
-  $("listaConf").innerHTML=html;
-}
 
 function renderTanques(){
   let html="";
