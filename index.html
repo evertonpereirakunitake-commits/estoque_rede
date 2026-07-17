@@ -118,11 +118,12 @@ td input{width:110px;}
 @media(max-width:680px){.cards-vendas{grid-template-columns:1fr;}}
 .cv{background:#fbfcfd;border:1px solid var(--linha);border-radius:14px;padding:16px 18px;border-left:6px solid var(--c);}
 .cv .rotulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--texto-fraco);text-transform:uppercase;letter-spacing:.5px;}
-.cv-linhas{display:flex;gap:14px;margin-top:10px;}
-.cv-linhas > div{flex:1;}
+.cv-linhas{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;}
+.cv-linhas > div{flex:1;min-width:80px;}
 .cv-l{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--texto-fraco);font-weight:600;}
 .cv-v{font-size:22px;color:var(--texto);margin-top:2px;}
 .cv-v small{font-size:12px;color:var(--texto-fraco);font-weight:500;}
+.cv-v.receb{color:var(--ouro);}
 
 /* ---------- topo do detalhe (admin) ---------- */
 .detalhe-topo{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
@@ -228,7 +229,7 @@ td input{width:110px;}
       <div id="msgReceb" class="msg"></div>
       <span class="eyebrow">Entrada de combustível</span>
       <h2>Receber combustível</h2>
-      <p style="color:var(--texto-fraco);font-size:13px;margin:4px 0 16px;">Lance o volume total recebido por combustível e o número da nota fiscal. Não precisa separar por tanque.</p>
+      <p style="color:var(--texto-fraco);font-size:13px;margin:4px 0 16px;">Lance o volume total recebido por combustível e o número da nota fiscal. Não precisa separar por tanque. Assim que o Setor de Compras der baixa, a nota some desta lista automaticamente.</p>
       <div class="form-tanque" style="margin-top:6px;">
         <div><label class="campo">Combustível</label>
           <select id="recComb"><option>Gasolina Comum</option><option>Etanol</option><option>Diesel S10</option></select></div>
@@ -284,7 +285,7 @@ td input{width:110px;}
       <div style="margin-top:26px;">
         <span class="eyebrow">Recebimentos a conferir</span>
         <h2 style="margin-bottom:6px;">Notas pendentes de baixa</h2>
-        <p style="color:var(--texto-fraco);font-size:13px;margin:0 0 14px;">Notas lançadas por este posto. Ao dar baixa, a nota some daqui (fica registrada como conferida).</p>
+        <p style="color:var(--texto-fraco);font-size:13px;margin:0 0 14px;">Notas lançadas por este posto. Ao dar baixa, a nota some daqui e também da tela do posto.</p>
         <table>
           <thead><tr><th>Data</th><th>Combustível</th><th>Volume</th><th>Nota fiscal</th><th></th></tr></thead>
           <tbody id="detReceb"></tbody>
@@ -451,6 +452,9 @@ function corNivel(pct){ if(pct<=LIMITE_BAIXO)return "var(--alerta)"; if(pct<=50)
 let recebimentos = [];
 function hojeISO(){ return new Date().toISOString().slice(0,10); }
 
+// CORREÇÃO: só busca notas ainda NÃO conferidas.
+// Assim que o Setor de Compras der baixa (conferido=true), a nota
+// some automaticamente também desta tela do posto.
 async function carregarRecebimentos(){
   const { data, error } = await sb.from("recebimentos")
     .select("*").eq("posto_id",postoAtual.id).eq("conferido",false).order("data",{ascending:false});
@@ -460,7 +464,7 @@ async function carregarRecebimentos(){
 }
 function renderRecebimentos(){
   let html="";
-  if(recebimentos.length===0) html=`<tr><td colspan="5" class="vazio">Nenhum recebimento lançado ainda.</td></tr>`;
+  if(recebimentos.length===0) html=`<tr><td colspan="5" class="vazio">Nenhum recebimento pendente. Tudo conferido pelo Setor de Compras. ✅</td></tr>`;
   recebimentos.forEach(r=>{
     const cor=CORES[r.combustivel]||"var(--diesel)";
     const dataBR = r.data ? new Date(r.data+"T00:00").toLocaleDateString("pt-BR") : "—";
@@ -579,19 +583,29 @@ async function abrirPosto(id){
   };
   $("detCards").innerHTML = cc("Gasolina Comum","var(--gasolina)")+cc("Etanol","var(--etanol)")+cc("Diesel S10","var(--diesel)");
 
-  // ----- vendas hoje / ontem -----
+  // ----- vendas hoje / ontem + recebido hoje / ontem (separados) -----
   $("detVendas").innerHTML = '<div class="vazio" style="padding:14px;">Carregando vendas...</div>';
   const { data:vendas, error:errV } = await sb.rpc("vendas_posto", { p_posto: p.id });
   if(errV){ $("detVendas").innerHTML = '<div class="vazio" style="padding:14px;">Não foi possível calcular vendas.</div>'; }
   else {
-    const v = {"Gasolina Comum":{h:0,o:0},"Etanol":{h:0,o:0},"Diesel S10":{h:0,o:0}};
-    (vendas||[]).forEach(r=>{ if(v[r.combustivel]){ v[r.combustivel].h=Number(r.vendas_hoje); v[r.combustivel].o=Number(r.vendas_ontem); }});
+    const v = {
+      "Gasolina Comum":{h:0,o:0,rh:0,ro:0},
+      "Etanol":{h:0,o:0,rh:0,ro:0},
+      "Diesel S10":{h:0,o:0,rh:0,ro:0}
+    };
+    (vendas||[]).forEach(r=>{ if(v[r.combustivel]){
+      v[r.combustivel].h  = Number(r.vendas_hoje);
+      v[r.combustivel].o  = Number(r.vendas_ontem);
+      v[r.combustivel].rh = Number(r.recebido_hoje||0);
+      v[r.combustivel].ro = Number(r.recebido_ontem||0);
+    }});
     const cv=(nome,cor)=>`
       <div class="cv" style="--c:${cor}">
         <div class="rotulo"><span class="dot" style="background:${cor}"></span>${nome}</div>
         <div class="cv-linhas">
           <div><div class="cv-l">Hoje</div><div class="cv-v num">${fmt(v[nome].h)} <small>L</small></div></div>
           <div><div class="cv-l">Ontem</div><div class="cv-v num">${fmt(v[nome].o)} <small>L</small></div></div>
+          <div><div class="cv-l">Recebido hoje</div><div class="cv-v receb num">${fmt(v[nome].rh)} <small>L</small></div></div>
         </div>
       </div>`;
     $("detVendas").innerHTML = cv("Gasolina Comum","var(--gasolina)")+cv("Etanol","var(--etanol)")+cv("Diesel S10","var(--diesel)");
@@ -653,7 +667,7 @@ async function carregarRecebPendentes(postoId){
   tb.innerHTML=html;
 }
 async function darBaixaReceb(id){
-  if(!confirm("Confirmar baixa desta nota? Ela sairá da lista de pendentes.")) return;
+  if(!confirm("Confirmar baixa desta nota? Ela sairá da lista de pendentes aqui e também da tela do posto.")) return;
   const { error } = await sb.from("recebimentos").update({ conferido:true }).eq("id",id);
   if(error){ alert("Erro ao dar baixa: "+error.message); return; }
   if(postoDetalheId) carregarRecebPendentes(postoDetalheId);
