@@ -453,7 +453,7 @@ function hojeISO(){ return new Date().toISOString().slice(0,10); }
 
 async function carregarRecebimentos(){
   const { data, error } = await sb.from("recebimentos")
-    .select("*").eq("posto_id",postoAtual.id).order("data",{ascending:false});
+    .select("*").eq("posto_id",postoAtual.id).eq("conferido",false).order("data",{ascending:false});
   if(error){ if(error.code!=="42P01") msg($("msgReceb"), error.message, "erro"); return; }
   recebimentos = data || [];
   renderRecebimentos();
