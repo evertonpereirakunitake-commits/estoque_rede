@@ -118,12 +118,37 @@ td input{width:110px;}
 @media(max-width:680px){.cards-vendas{grid-template-columns:1fr;}}
 .cv{background:#fbfcfd;border:1px solid var(--linha);border-radius:14px;padding:16px 18px;border-left:6px solid var(--c);}
 .cv .rotulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--texto-fraco);text-transform:uppercase;letter-spacing:.5px;}
-.cv-linhas{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;}
-.cv-linhas > div{flex:1;min-width:80px;}
+.cv-linhas{display:flex;gap:14px;margin-top:10px;}
+.cv-linhas > div{flex:1;}
 .cv-l{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--texto-fraco);font-weight:600;}
 .cv-v{font-size:22px;color:var(--texto);margin-top:2px;}
 .cv-v small{font-size:12px;color:var(--texto-fraco);font-weight:500;}
-.cv-v.receb{color:var(--ouro);}
+
+/* ---------- descargas e envelopes ---------- */
+.blocos-extra{display:grid;grid-template-columns:1.4fr 1fr;gap:22px;margin-top:26px;}
+@media(max-width:820px){.blocos-extra{grid-template-columns:1fr;}}
+.bloco-tit{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}
+.bloco-tit h3{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:20px;letter-spacing:.5px;text-transform:uppercase;margin:0;}
+.mini-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;}
+.mini-form .full{grid-column:1/-1;}
+.mini-form input,.mini-form select{padding:9px 11px;font-size:14px;}
+.lista-descargas{display:flex;flex-direction:column;gap:8px;}
+.card-desc{border:1px solid var(--linha);border-radius:10px;padding:12px 14px;background:#fbfcfd;}
+.card-desc.done{background:#f1faf3;border-color:#c6e6cf;}
+.card-desc .lin1{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+.card-desc .mot{font-weight:600;font-size:14px;}
+.card-desc .info{font-size:12.5px;color:var(--texto-fraco);margin-top:4px;}
+.card-desc .info b{color:var(--texto);}
+.card-desc .acoes{display:flex;gap:6px;margin-top:8px;}
+.card-desc button{font-size:12.5px;padding:6px 12px;border-radius:8px;}
+.btn-descarregar{background:var(--ok);color:#fff;}
+.btn-descarregar:hover{background:#128a3a;}
+.tag-feita{background:#dcf3e2;color:#14633a;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:3px 8px;border-radius:20px;}
+.envelopes-lista{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;max-height:220px;overflow-y:auto;padding:2px;}
+.env-chip{background:#fff8db;border:1px solid #f0d97a;color:#7a5c07;font-size:13px;font-weight:600;padding:5px 11px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;}
+.env-chip button{background:none;color:#a06d0a;padding:0;font-size:15px;line-height:1;border:0;cursor:pointer;font-weight:700;}
+.env-chip button:hover{color:#7a5c07;}
+.env-vazio{color:var(--texto-fraco);font-size:13px;padding:10px 0;}
 
 /* ---------- topo do detalhe (admin) ---------- */
 .detalhe-topo{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
@@ -222,28 +247,31 @@ td input{width:110px;}
         <div class="cc" style="--c:var(--etanol)"><div class="rotulo"><span class="dot" style="background:var(--etanol)"></span>Etanol</div><div class="valor num" id="eta">0 <small>L</small></div><div class="meta" id="etaSub">—</div></div>
         <div class="cc" style="--c:var(--diesel)"><div class="rotulo"><span class="dot" style="background:var(--diesel)"></span>Diesel S10</div><div class="valor num" id="die">0 <small>L</small></div><div class="meta" id="dieSub">—</div></div>
       </div>
-    </div>
 
-    <!-- ============ RECEBIMENTO DE COMBUSTÍVEL ============ -->
-    <div class="painel" style="margin-top:22px;">
-      <div id="msgReceb" class="msg"></div>
-      <span class="eyebrow">Entrada de combustível</span>
-      <h2>Receber combustível</h2>
-      <p style="color:var(--texto-fraco);font-size:13px;margin:4px 0 16px;">Lance o volume total recebido por combustível e o número da nota fiscal. Não precisa separar por tanque. Assim que o Setor de Compras der baixa, a nota some desta lista automaticamente.</p>
-      <div class="form-tanque" style="margin-top:6px;">
-        <div><label class="campo">Combustível</label>
-          <select id="recComb"><option>Gasolina Comum</option><option>Etanol</option><option>Diesel S10</option></select></div>
-        <div><label class="campo">Volume recebido (L)</label><input id="recVol" type="number" placeholder="Ex: 10000"></div>
-        <div><label class="campo">Nº da nota fiscal</label><input id="recNota" placeholder="Ex: 123456"></div>
-        <div><label class="campo">Data</label><input id="recData" type="date"></div>
-        <div><button class="ouro" onclick="adicionarRecebimento()">Lançar</button></div>
+      <div class="blocos-extra">
+        <!-- Descargas -->
+        <div>
+          <div class="bloco-tit"><h3>Descargas previstas</h3></div>
+          <div class="mini-form">
+            <input id="dMot" class="full" placeholder="Nome do motorista">
+            <input id="dData" type="date">
+            <select id="dComb"><option>Gasolina Comum</option><option>Etanol</option><option>Diesel S10</option></select>
+            <input id="dVol" type="number" placeholder="Volume (L)">
+            <button onclick="cadastrarDescarga()">Adicionar descarga</button>
+          </div>
+          <div id="listaDescargas" class="lista-descargas"></div>
+        </div>
+        <!-- Envelopes -->
+        <div>
+          <div class="bloco-tit"><h3>Envelopes de amostra</h3></div>
+          <div class="mini-form">
+            <input id="eNum" class="full" placeholder="Número do envelope">
+            <button class="full" onclick="cadastrarEnvelope()">Adicionar envelope</button>
+          </div>
+          <div id="listaEnvelopes" class="envelopes-lista"></div>
+        </div>
       </div>
-      <table>
-        <thead><tr><th>Data</th><th>Combustível</th><th>Volume</th><th>Nota fiscal</th><th></th></tr></thead>
-        <tbody id="listaReceb"></tbody>
-      </table>
     </div>
-
   </div>
 </div>
 
@@ -282,20 +310,22 @@ td input{width:110px;}
         <div id="detVendas" class="cards-vendas"></div>
       </div>
 
-      <div style="margin-top:26px;">
-        <span class="eyebrow">Recebimentos a conferir</span>
-        <h2 style="margin-bottom:6px;">Notas pendentes de baixa</h2>
-        <p style="color:var(--texto-fraco);font-size:13px;margin:0 0 14px;">Notas lançadas por este posto. Ao dar baixa, a nota some daqui e também da tela do posto.</p>
-        <table>
-          <thead><tr><th>Data</th><th>Combustível</th><th>Volume</th><th>Nota fiscal</th><th></th></tr></thead>
-          <tbody id="detReceb"></tbody>
-        </table>
-      </div>
-
       <table style="margin-top:26px;">
         <thead><tr><th>Combustível</th><th>Tanque</th><th>Capacidade</th><th>Estoque</th><th>Nível</th><th>Atualizado</th></tr></thead>
         <tbody id="detTabela"></tbody>
       </table>
+
+      <div class="blocos-extra">
+        <div>
+          <div class="bloco-tit"><h3>Descargas do posto</h3></div>
+          <div id="detDescargas" class="lista-descargas"></div>
+        </div>
+        <div>
+          <div class="bloco-tit"><h3>Envelopes de amostra</h3>
+            <span style="font-size:12px;color:var(--texto-fraco);">Clique no × para dar baixa</span></div>
+          <div id="detEnvelopes" class="envelopes-lista"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -401,7 +431,7 @@ async function iniciarSessao(){
   else {
     $("postoNome").textContent = perfil.nome;
     $("postoCnpj").textContent = perfil.cnpj;
-    mostrarTela("Posto"); carregarTanques();
+    mostrarTela("Posto"); carregarTanques(); carregarDescargas(); carregarEnvelopes();
   }
 }
 function mostrarTela(qual){ ["Auth","Posto","Admin"].forEach(t=>$("tela"+t).classList.toggle("hidden", t!==qual)); }
@@ -411,9 +441,6 @@ async function carregarTanques(){
   const { data, error } = await sb.from("tanques").select("*").eq("posto_id",postoAtual.id).order("combustivel");
   if(error) return msg($("msgPosto"), error.message, "erro");
   tanques = ordenarTanques(data || []); renderTanques();
-  // recebimentos + data padrão do lançamento
-  if($("recData") && !$("recData").value) $("recData").value = hojeISO();
-  carregarRecebimentos();
 }
 async function adicionarTanque(){
   const combustivel=$("comb").value, numero=$("num").value.trim(),
@@ -447,59 +474,6 @@ async function removerTanque(id, nome){
   carregarTanques();
 }
 function corNivel(pct){ if(pct<=LIMITE_BAIXO)return "var(--alerta)"; if(pct<=50)return "var(--aviso)"; return "var(--ok)"; }
-
-/* ---------------- RECEBIMENTO DE COMBUSTÍVEL ---------------- */
-let recebimentos = [];
-function hojeISO(){ return new Date().toISOString().slice(0,10); }
-
-// CORREÇÃO: só busca notas ainda NÃO conferidas.
-// Assim que o Setor de Compras der baixa (conferido=true), a nota
-// some automaticamente também desta tela do posto.
-async function carregarRecebimentos(){
-  const { data, error } = await sb.from("recebimentos")
-    .select("*").eq("posto_id",postoAtual.id).eq("conferido",false).order("data",{ascending:false});
-  if(error){ if(error.code!=="42P01") msg($("msgReceb"), error.message, "erro"); return; }
-  recebimentos = data || [];
-  renderRecebimentos();
-}
-function renderRecebimentos(){
-  let html="";
-  if(recebimentos.length===0) html=`<tr><td colspan="5" class="vazio">Nenhum recebimento pendente. Tudo conferido pelo Setor de Compras. ✅</td></tr>`;
-  recebimentos.forEach(r=>{
-    const cor=CORES[r.combustivel]||"var(--diesel)";
-    const dataBR = r.data ? new Date(r.data+"T00:00").toLocaleDateString("pt-BR") : "—";
-    html+=`<tr>
-      <td>${dataBR}</td>
-      <td><span class="pill"><span class="dot" style="background:${cor}"></span>${r.combustivel}</span></td>
-      <td class="num">${fmt(r.volume)} L</td>
-      <td>${r.nota_fiscal||"—"}</td>
-      <td><button class="del" onclick="removerRecebimento('${r.id}')">Remover</button></td>
-    </tr>`;
-  });
-  $("listaReceb").innerHTML=html;
-}
-async function adicionarRecebimento(){
-  const combustivel=$("recComb").value;
-  const volume=Number($("recVol").value);
-  const nota_fiscal=$("recNota").value.trim();
-  const data=$("recData").value || hojeISO();
-  if(!volume||volume<=0) return msg($("msgReceb"),"Informe um volume válido.","erro");
-  if(!nota_fiscal)        return msg($("msgReceb"),"Informe o número da nota fiscal.","erro");
-  const { error } = await sb.from("recebimentos").insert({
-    posto_id:postoAtual.id, combustivel, volume, nota_fiscal, data
-  });
-  if(error) return msg($("msgReceb"), error.message, "erro");
-  $("recVol").value=""; $("recNota").value="";
-  msg($("msgReceb"),"Recebimento lançado.","ok");
-  carregarRecebimentos();
-}
-async function removerRecebimento(id){
-  if(!confirm("Remover este recebimento?")) return;
-  const { error } = await sb.from("recebimentos").delete().eq("id",id);
-  if(error) return msg($("msgReceb"), error.message, "erro");
-  carregarRecebimentos();
-}
-
 
 function renderTanques(){
   let html="";
@@ -583,29 +557,19 @@ async function abrirPosto(id){
   };
   $("detCards").innerHTML = cc("Gasolina Comum","var(--gasolina)")+cc("Etanol","var(--etanol)")+cc("Diesel S10","var(--diesel)");
 
-  // ----- vendas hoje / ontem + recebido hoje / ontem (separados) -----
+  // ----- vendas hoje / ontem -----
   $("detVendas").innerHTML = '<div class="vazio" style="padding:14px;">Carregando vendas...</div>';
   const { data:vendas, error:errV } = await sb.rpc("vendas_posto", { p_posto: p.id });
   if(errV){ $("detVendas").innerHTML = '<div class="vazio" style="padding:14px;">Não foi possível calcular vendas.</div>'; }
   else {
-    const v = {
-      "Gasolina Comum":{h:0,o:0,rh:0,ro:0},
-      "Etanol":{h:0,o:0,rh:0,ro:0},
-      "Diesel S10":{h:0,o:0,rh:0,ro:0}
-    };
-    (vendas||[]).forEach(r=>{ if(v[r.combustivel]){
-      v[r.combustivel].h  = Number(r.vendas_hoje);
-      v[r.combustivel].o  = Number(r.vendas_ontem);
-      v[r.combustivel].rh = Number(r.recebido_hoje||0);
-      v[r.combustivel].ro = Number(r.recebido_ontem||0);
-    }});
+    const v = {"Gasolina Comum":{h:0,o:0},"Etanol":{h:0,o:0},"Diesel S10":{h:0,o:0}};
+    (vendas||[]).forEach(r=>{ if(v[r.combustivel]){ v[r.combustivel].h=Number(r.vendas_hoje); v[r.combustivel].o=Number(r.vendas_ontem); }});
     const cv=(nome,cor)=>`
       <div class="cv" style="--c:${cor}">
         <div class="rotulo"><span class="dot" style="background:${cor}"></span>${nome}</div>
         <div class="cv-linhas">
           <div><div class="cv-l">Hoje</div><div class="cv-v num">${fmt(v[nome].h)} <small>L</small></div></div>
           <div><div class="cv-l">Ontem</div><div class="cv-v num">${fmt(v[nome].o)} <small>L</small></div></div>
-          <div><div class="cv-l">Recebido hoje</div><div class="cv-v receb num">${fmt(v[nome].rh)} <small>L</small></div></div>
         </div>
       </div>`;
     $("detVendas").innerHTML = cv("Gasolina Comum","var(--gasolina)")+cv("Etanol","var(--etanol)")+cv("Diesel S10","var(--diesel)");
@@ -627,54 +591,138 @@ async function abrirPosto(id){
   });
   $("detTabela").innerHTML=linhas;
 
-  // recebimentos pendentes deste posto
-  carregarRecebPendentes(p.id);
-
   $("adminLista").classList.add("hidden");
   $("adminDetalhe").classList.remove("hidden");
   window.scrollTo(0,0);
-}
 
-/* ---- recebimentos pendentes (admin / compras) ---- */
-let postoDetalheId = null;
-async function carregarRecebPendentes(postoId){
-  postoDetalheId = postoId;
-  const tb=$("detReceb");
-  tb.innerHTML=`<tr><td colspan="5" class="vazio">Carregando...</td></tr>`;
-  const { data, error } = await sb.from("recebimentos")
-    .select("*").eq("posto_id",postoId).eq("conferido",false)
-    .order("data",{ascending:false});
-  if(error){
-    tb.innerHTML=`<tr><td colspan="5" class="vazio">${error.code==="42P01"?"Rode o SQL de recebimentos primeiro.":error.message}</td></tr>`;
-    return;
-  }
-  if(!data || data.length===0){
-    tb.innerHTML=`<tr><td colspan="5" class="vazio">Nenhuma nota pendente. Tudo conferido. ✅</td></tr>`;
-    return;
-  }
-  let html="";
-  data.forEach(r=>{
-    const cor=CORES[r.combustivel]||"var(--diesel)";
-    const dataBR = r.data ? new Date(r.data+"T00:00").toLocaleDateString("pt-BR") : "—";
-    html+=`<tr>
-      <td>${dataBR}</td>
-      <td><span class="pill"><span class="dot" style="background:${cor}"></span>${r.combustivel}</span></td>
-      <td class="num">${fmt(r.volume)} L</td>
-      <td>${r.nota_fiscal||"—"}</td>
-      <td><button class="ouro" onclick="darBaixaReceb('${r.id}')">Dar baixa</button></td>
-    </tr>`;
-  });
-  tb.innerHTML=html;
-}
-async function darBaixaReceb(id){
-  if(!confirm("Confirmar baixa desta nota? Ela sairá da lista de pendentes aqui e também da tela do posto.")) return;
-  const { error } = await sb.from("recebimentos").update({ conferido:true }).eq("id",id);
-  if(error){ alert("Erro ao dar baixa: "+error.message); return; }
-  if(postoDetalheId) carregarRecebPendentes(postoDetalheId);
+  // carrega descargas e envelopes do posto (assíncrono)
+  carregarDetalheExtra(p.id);
 }
 function voltarLista(){
   $("adminDetalhe").classList.add("hidden");
   $("adminLista").classList.remove("hidden");
+}
+
+/* ---------- DESCARGAS E ENVELOPES (POSTO) ---------- */
+async function carregarDescargas(){
+  const { data, error } = await sb.from("descargas").select("*").eq("posto_id",postoAtual.id)
+    .order("descarregado").order("data_prevista",{ascending:false});
+  if(error) return;
+  renderDescargasPosto(data||[]);
+}
+function renderDescargasPosto(lista){
+  if(lista.length===0){ $("listaDescargas").innerHTML=`<div class="env-vazio">Nenhuma descarga cadastrada.</div>`; return; }
+  let html="";
+  lista.forEach(d=>{
+    const cor = CORES[d.combustivel] || "var(--diesel)";
+    const dataFmt = new Date(d.data_prevista+"T00:00:00").toLocaleDateString("pt-BR");
+    html+=`<div class="card-desc ${d.descarregado?'done':''}">
+      <div class="lin1">
+        <div class="mot">${d.motorista}</div>
+        ${d.descarregado?'<span class="tag-feita">Descarregado</span>':''}
+      </div>
+      <div class="info"><span class="pill"><span class="dot" style="background:${cor}"></span>${d.combustivel}</span>
+        &nbsp; <b>${fmt(d.volume)} L</b> &nbsp; · &nbsp; Previsto: <b>${dataFmt}</b></div>
+      <div class="acoes">
+        ${d.descarregado?'':`<button class="btn-descarregar" onclick="marcarDescarregada('${d.id}')">Marcar como descarregado</button>`}
+        <button class="del" onclick="removerDescarga('${d.id}')">Remover</button>
+      </div>
+    </div>`;
+  });
+  $("listaDescargas").innerHTML=html;
+}
+async function cadastrarDescarga(){
+  const motorista=$("dMot").value.trim(), data_prevista=$("dData").value,
+        combustivel=$("dComb").value, volume=Number($("dVol").value);
+  if(!motorista) return msg($("msgPosto"),"Informe o motorista.","erro");
+  if(!data_prevista) return msg($("msgPosto"),"Informe a data prevista.","erro");
+  if(!volume||volume<=0) return msg($("msgPosto"),"Informe um volume válido.","erro");
+  const { error } = await sb.from("descargas").insert({ posto_id:postoAtual.id, motorista, data_prevista, combustivel, volume });
+  if(error) return msg($("msgPosto"), error.message, "erro");
+  $("dMot").value=""; $("dData").value=""; $("dVol").value="";
+  msg($("msgPosto"),"Descarga cadastrada.","ok");
+  carregarDescargas();
+}
+async function marcarDescarregada(id){
+  if(!confirm("Confirmar descarregamento? O volume será somado ao estoque.")) return;
+  const { error } = await sb.rpc("marcar_descarregada",{ p_descarga:id });
+  if(error) return msg($("msgPosto"), error.message, "erro");
+  msg($("msgPosto"),"Descarregamento confirmado. Estoque atualizado.","ok");
+  carregarDescargas(); carregarTanques();
+}
+async function removerDescarga(id){
+  if(!confirm("Remover esta descarga?")) return;
+  const { error } = await sb.from("descargas").delete().eq("id",id);
+  if(error) return msg($("msgPosto"), error.message, "erro");
+  carregarDescargas();
+}
+
+async function carregarEnvelopes(){
+  const { data, error } = await sb.from("envelopes").select("*").eq("posto_id",postoAtual.id).order("numero");
+  if(error) return;
+  renderEnvelopesPosto(data||[]);
+}
+function renderEnvelopesPosto(lista){
+  if(lista.length===0){ $("listaEnvelopes").innerHTML=`<div class="env-vazio">Nenhum envelope cadastrado.</div>`; return; }
+  let html="";
+  lista.forEach(e=>{
+    html+=`<span class="env-chip">${e.numero}<button title="Remover" onclick="removerEnvelope('${e.id}')">×</button></span>`;
+  });
+  $("listaEnvelopes").innerHTML=html;
+}
+async function cadastrarEnvelope(){
+  const numero=$("eNum").value.trim();
+  if(!numero) return msg($("msgPosto"),"Informe o número.","erro");
+  const { error } = await sb.from("envelopes").insert({ posto_id:postoAtual.id, numero });
+  if(error){
+    if(/duplicate/i.test(error.message)) return msg($("msgPosto"),"Este número já foi cadastrado.","erro");
+    return msg($("msgPosto"), error.message, "erro");
+  }
+  $("eNum").value=""; $("eNum").focus();
+  carregarEnvelopes();
+}
+async function removerEnvelope(id){
+  const { error } = await sb.from("envelopes").delete().eq("id",id);
+  if(error) return msg($("msgPosto"), error.message, "erro");
+  carregarEnvelopes();
+}
+
+/* ---------- DESCARGAS E ENVELOPES (ADMIN) ---------- */
+async function carregarDetalheExtra(postoId){
+  const { data:desc }= await sb.from("descargas").select("*").eq("posto_id",postoId).order("descarregado").order("data_prevista",{ascending:false});
+  const { data:env } = await sb.from("envelopes").select("*").eq("posto_id",postoId).order("numero");
+
+  if(!desc || desc.length===0) $("detDescargas").innerHTML=`<div class="env-vazio">Nenhuma descarga cadastrada.</div>`;
+  else {
+    let html="";
+    desc.forEach(d=>{
+      const cor = CORES[d.combustivel] || "var(--diesel)";
+      const dataFmt = new Date(d.data_prevista+"T00:00:00").toLocaleDateString("pt-BR");
+      html+=`<div class="card-desc ${d.descarregado?'done':''}">
+        <div class="lin1"><div class="mot">${d.motorista}</div>${d.descarregado?'<span class="tag-feita">Descarregado</span>':'<span class="tag-feita" style="background:#fff8db;color:#7a5c07;">Previsto</span>'}</div>
+        <div class="info"><span class="pill"><span class="dot" style="background:${cor}"></span>${d.combustivel}</span>
+          &nbsp; <b>${fmt(d.volume)} L</b> &nbsp; · &nbsp; ${dataFmt}
+          ${d.descarregado_em?' · descarregado em '+new Date(d.descarregado_em).toLocaleString("pt-BR"):''}
+        </div>
+      </div>`;
+    });
+    $("detDescargas").innerHTML=html;
+  }
+
+  if(!env || env.length===0) $("detEnvelopes").innerHTML=`<div class="env-vazio">Nenhum envelope cadastrado.</div>`;
+  else {
+    let html="";
+    env.forEach(e=>{
+      html+=`<span class="env-chip">${e.numero}<button title="Dar baixa" onclick="baixarEnvelopeAdmin('${e.id}','${postoId}')">×</button></span>`;
+    });
+    $("detEnvelopes").innerHTML=html;
+  }
+}
+async function baixarEnvelopeAdmin(id, postoId){
+  if(!confirm("Dar baixa neste envelope? Ele será removido do sistema.")) return;
+  const { error } = await sb.from("envelopes").delete().eq("id",id);
+  if(error){ alert("Erro: "+error.message); return; }
+  carregarDetalheExtra(postoId);
 }
 
 /* ---------------- INÍCIO ---------------- */
