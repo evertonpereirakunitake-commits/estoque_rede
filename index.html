@@ -704,6 +704,7 @@ async function carregarDetalheExtra(postoId){
           &nbsp; <b>${fmt(d.volume)} L</b> &nbsp; · &nbsp; ${dataFmt}
           ${d.descarregado_em?' · descarregado em '+new Date(d.descarregado_em).toLocaleString("pt-BR"):''}
         </div>
+        <div class="acoes"><button class="del" onclick="baixarDescargaAdmin('${d.id}','${postoId}')">Dar baixa</button></div>
       </div>`;
     });
     $("detDescargas").innerHTML=html;
@@ -721,6 +722,12 @@ async function carregarDetalheExtra(postoId){
 async function baixarEnvelopeAdmin(id, postoId){
   if(!confirm("Dar baixa neste envelope? Ele será removido do sistema.")) return;
   const { error } = await sb.from("envelopes").delete().eq("id",id);
+  if(error){ alert("Erro: "+error.message); return; }
+  carregarDetalheExtra(postoId);
+}
+async function baixarDescargaAdmin(id, postoId){
+  if(!confirm("Dar baixa nesta descarga? Ela será removida do sistema (não altera o estoque).")) return;
+  const { error } = await sb.from("descargas").delete().eq("id",id);
   if(error){ alert("Erro: "+error.message); return; }
   carregarDetalheExtra(postoId);
 }
