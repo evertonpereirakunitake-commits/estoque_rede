@@ -282,7 +282,7 @@ td input{width:110px;}
       <div class="logo-b">B</div>
       <div><span class="nome">Rede Benedetti</span><span class="sub-nome">Setor de Compras</span></div>
     </div>
-    <div class="header-dir"><button class="sec" onclick="recarregarAdmin()">Atualizar</button> <button class="sec" onclick="sair()">Sair</button></div>
+    <div class="header-dir"><button class="ouro" id="btnPlanilha" style="padding:9px 16px;font-size:13px;" onclick="gerarPlanilha()">Baixar planilha de estoque</button> <button class="sec" onclick="recarregarAdmin()">Atualizar</button> <button class="sec" onclick="sair()">Sair</button></div>
   </header>
 
   <div class="wrap">
@@ -331,6 +331,7 @@ td input{width:110px;}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
 /* ============================================================
    CONFIGURAÇÃO Supabase
@@ -730,6 +731,328 @@ async function baixarDescargaAdmin(id, postoId){
   const { error } = await sb.from("descargas").delete().eq("id",id);
   if(error){ alert("Erro: "+error.message); return; }
   carregarDetalheExtra(postoId);
+}
+
+/* ---------- PLANILHA DE ESTOQUE (EXCEL) ---------- */
+// Nome curto do posto para a planilha (tira "Auto Posto", "Benedetti", "Ltda"...)
+function apelidoPosto(nome){
+  let s=(nome||"").toUpperCase();
+  [/AUTO\s*POSTO/g,/\bPOSTO\b/g,/\bBENEDETTI\b/g,/\bLTDA\.?/g,/\bEIRELI\b/g,/\bS\/A\b/g,
+   /CENTRO DE ABASTECIMENTO DE COMBUST[IÍ]VEIS/g].forEach(r=>{ s=s.replace(r," "); });
+  s=s.replace(/\s+/g," ").trim().replace(/^(DE|DO|DA)\s+/,"").replace(/\s+(ME)$/,"").trim();
+  return s || (nome||"").toUpperCase();
+}
+function dataArquivo(d){
+  const p=n=>String(n).padStart(2,"0");
+  return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"_"+p(d.getHours())+"h"+p(d.getMinutes());
+}
+// Monta o arquivo Excel. "lista" = postos com seus tanques. Devolve o workbook.
+function montarPlanilha(lista, agora){
+  // ---- paleta Rede Benedetti ----
+  const C={
+    preto:"FF15171A", ouro:"FFE6B422", ouroClaro:"FFFCF3D6", branco:"FFFFFFFF",
+    texto:"FF1D2024", fraco:"FF6B7280", linha:"FFD9DCE1", zebra:"FFF7F8FA", fundo:"FFF1F3F5",
+    okT:"FF15803D", okF:"FFE7F6EC", avT:"FFB45309", avF:"FFFEF3C7", baT:"FFC81E1E", baF:"FFFDE2E2"
+  };
+  const COMBS=[
+    {letra:"A", nome:"Etanol",         curto:"ETANOL",   cor:"FF16A34A", claro:"FFE7F6EC"},
+    {letra:"G", nome:"Gasolina Comum", curto:"GASOLINA", cor:"FFD52B2B", claro:"FFFDECEC"},
+    {letra:"D", nome:"Diesel S10",     curto:"DIESEL",   cor:"FF6B7280", claro:"FFF1F2F4"}
+  ];
+  const LIM=(typeof LIMITE_BAIXO!=="undefined"?LIMITE_BAIXO:20)/100;
+  const fill=c=>({type:"pattern",pattern:"solid",fgColor:{argb:c}});
+  const fina=c=>({style:"thin",color:{argb:c||C.linha}});
+  const caixa=c=>({top:fina(c),left:fina(c),bottom:fina(c),right:fina(c)});
+  const F=(o)=>Object.assign({name:"Calibri",size:11,color:{argb:C.texto}},o||{});
+  const nivel=p=>p<=LIM?{t:C.baT,f:C.baF,txt:"Estoque baixo"}:p<=0.5?{t:C.avT,f:C.avF,txt:"Atenção"}:{t:C.okT,f:C.okF,txt:"Normal"};
+  const dataTxt=agora.toLocaleDateString("pt-BR")+" às "+agora.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  const LITROS='#,##0" L"';
+
+  // ---- agrega dados por posto ----
+  const rede={}; COMBS.forEach(c=>rede[c.nome]={e:0,c:0});
+  let postosBaixo=0;
+  lista.forEach(p=>{
+    p.ag={}; let minPct=1, temTanque=false;
+    COMBS.forEach(c=>{
+      const lt=p.tanques.filter(x=>x.combustivel===c.nome);
+      const e=lt.reduce((a,x)=>a+Number(x.estoque||0),0), cap=lt.reduce((a,x)=>a+Number(x.capacidade||0),0);
+      p.ag[c.nome]={n:lt.length,e,c:cap,pct:cap>0?e/cap:0};
+      rede[c.nome].e+=e; rede[c.nome].c+=cap;
+      lt.forEach(x=>{ temTanque=true; const q=Number(x.capacidade)>0?Number(x.estoque)/Number(x.capacidade):0; if(q<minPct) minPct=q; });
+    });
+    p.minPct=temTanque?minPct:null;
+    if(temTanque && minPct<=LIM) postosBaixo++;
+  });
+  const totalGeral=COMBS.reduce((a,c)=>a+rede[c.nome].e,0);
+  const capGeral=COMBS.reduce((a,c)=>a+rede[c.nome].c,0);
+
+  const wb=new ExcelJS.Workbook();
+  wb.creator="Rede Benedetti"; wb.created=agora;
+
+  // faixa de título preta com nome em dourado
+  function faixa(ws, ultimaCol, subtitulo){
+    ws.getRow(1).height=34; ws.getRow(2).height=20;
+    for(let c=1;c<=ultimaCol;c++){ ws.getCell(1,c).fill=fill(C.preto); ws.getCell(2,c).fill=fill(C.preto); }
+    ws.mergeCells(1,2,1,ultimaCol-1); ws.mergeCells(2,2,2,ultimaCol-1);
+    const a=ws.getCell(1,2);
+    a.value={richText:[
+      {text:"B  ",font:F({bold:true,size:22,color:{argb:C.ouro}})},
+      {text:"REDE BENEDETTI",font:F({bold:true,size:18,color:{argb:C.ouro}})}]};
+    a.alignment={vertical:"middle"};
+    const b=ws.getCell(2,2);
+    b.value=subtitulo+"   ·   gerado em "+dataTxt;
+    b.font=F({size:10,color:{argb:"FFB8BDC4"}}); b.alignment={vertical:"top"};
+    ws.headerFooter.oddFooter="&L&8Rede Benedetti · Controle de Estoque&R&8Página &P de &N";
+  }
+
+  // =====================================================================
+  // ABA 1 — QUADRO DE ESTOQUE (formato do setor de estoque, 3 postos por linha)
+  // colunas: A margem | B C D posto1 | E esp | F G H posto2 | I esp | J K L posto3 | M margem
+  // =====================================================================
+  const ws=wb.addWorksheet("Quadro de estoque",{
+    views:[{showGridLines:false}],
+    pageSetup:{paperSize:9,orientation:"portrait",fitToPage:true,fitToWidth:1,fitToHeight:0,horizontalCentered:true,
+      margins:{left:0.3,right:0.3,top:0.4,bottom:0.5,header:0.2,footer:0.25}}});
+  ws.columns=[{width:2},{width:5},{width:15},{width:9},{width:2},{width:5},{width:15},{width:9},{width:2},{width:5},{width:15},{width:9},{width:2}];
+  faixa(ws,13,"Estoque de combustível por posto");
+  const BLOCO=[2,6,10]; // coluna inicial de cada bloco (letra, litros, %)
+
+  // --- cards de resumo da rede ---
+  let r=4;
+  COMBS.forEach((c,i)=>{
+    const col=BLOCO[i], tot=rede[c.nome];
+    ws.mergeCells(r,col,r,col+2); ws.mergeCells(r+1,col,r+1,col+2); ws.mergeCells(r+2,col,r+2,col+2);
+    const h=ws.getCell(r,col);
+    h.value=c.curto+" · TOTAL DA REDE"; h.font=F({bold:true,size:10,color:{argb:C.branco}});
+    h.fill=fill(c.cor); h.alignment={horizontal:"center",vertical:"middle"};
+    const v=ws.getCell(r+1,col);
+    v.value=tot.e; v.numFmt=LITROS; v.font=F({bold:true,size:20,color:{argb:C.texto}});
+    v.fill=fill(c.claro); v.alignment={horizontal:"center",vertical:"middle"};
+    const s=ws.getCell(r+2,col);
+    s.value=tot.c>0?(Math.round(tot.e/tot.c*100)+"% de "+tot.c.toLocaleString("pt-BR")+" L de capacidade"):"Sem tanques cadastrados";
+    s.font=F({size:9,color:{argb:C.fraco}}); s.fill=fill(c.claro); s.alignment={horizontal:"center",vertical:"middle"};
+    for(let k=0;k<3;k++) for(let cc=col;cc<=col+2;cc++){
+      const cell=ws.getCell(r+k,cc);
+      cell.border={left:cc===col?fina(c.cor):undefined,right:cc===col+2?fina(c.cor):undefined,
+                   top:k===0?fina(c.cor):undefined,bottom:k===2?fina(c.cor):undefined};
+    }
+  });
+  ws.getRow(r).height=18; ws.getRow(r+1).height=30; ws.getRow(r+2).height=16;
+
+  // --- faixa de indicadores ---
+  r=8;
+  ws.mergeCells(r,2,r,12);
+  const ind=ws.getCell(r,2);
+  ind.value={richText:[
+    {text:lista.length+" postos   ·   ",font:F({bold:true,size:10})},
+    {text:"Total geral: ",font:F({size:10,color:{argb:C.fraco}})},
+    {text:totalGeral.toLocaleString("pt-BR")+" L",font:F({bold:true,size:10})},
+    {text:capGeral>0?(" ("+Math.round(totalGeral/capGeral*100)+"% da capacidade)   ·   "):"   ·   ",font:F({size:10,color:{argb:C.fraco}})},
+    {text:postosBaixo+(postosBaixo===1?" posto":" postos")+" com tanque abaixo de "+Math.round(LIM*100)+"%",
+     font:F({bold:true,size:10,color:{argb:postosBaixo?C.baT:C.okT}})}]};
+  ind.fill=fill(C.ouroClaro); ind.alignment={horizontal:"center",vertical:"middle"};
+  ind.border={top:fina(C.ouro),bottom:fina(C.ouro)};
+  ws.getRow(r).height=22;
+
+  // --- título da seção ---
+  r=10;
+  ws.mergeCells(r,2,r,12);
+  const sec=ws.getCell(r,2);
+  sec.value="ESTOQUE POR POSTO"; sec.font=F({bold:true,size:12,color:{argb:C.preto}});
+  sec.border={bottom:{style:"medium",color:{argb:C.ouro}}};
+  ws.getRow(r).height=20;
+
+  // --- blocos de posto (3 por linha) ---
+  r=12;
+  for(let i=0;i<lista.length;i+=3){
+    lista.slice(i,i+3).forEach((p,j)=>{
+      const col=BLOCO[j];
+      // nome
+      ws.mergeCells(r,col,r,col+2);
+      const n=ws.getCell(r,col);
+      n.value=p.apelido; n.font=F({bold:true,size:11,color:{argb:C.ouro}});
+      n.fill=fill(C.preto); n.alignment={horizontal:"center",vertical:"middle"};
+      // cidade
+      ws.mergeCells(r+1,col,r+1,col+2);
+      const ci=ws.getCell(r+1,col);
+      ci.value=(p.cidade||"").toUpperCase()||" "; ci.font=F({size:8,color:{argb:C.fraco}});
+      ci.fill=fill(C.fundo); ci.alignment={horizontal:"center",vertical:"middle"};
+      // combustíveis
+      COMBS.forEach((c,k)=>{
+        const rr=r+2+k, ag=p.ag[c.nome];
+        const L=ws.getCell(rr,col), V=ws.getCell(rr,col+1), P=ws.getCell(rr,col+2);
+        [L,V,P].forEach(x=>x.border={bottom:fina(),left:x===L?fina():undefined,right:x===P?fina():undefined});
+        if(ag.n){
+          L.value=c.letra; L.font=F({bold:true,color:{argb:C.branco}}); L.fill=fill(c.cor);
+          L.alignment={horizontal:"center",vertical:"middle"};
+          V.value=ag.e; V.numFmt=LITROS; V.font=F({bold:true}); V.alignment={horizontal:"right",vertical:"middle"};
+          const nv=nivel(ag.pct);
+          P.value=ag.pct; P.numFmt="0%"; P.font=F({bold:true,size:10,color:{argb:nv.t}}); P.fill=fill(nv.f);
+          P.alignment={horizontal:"center",vertical:"middle"};
+        }else{
+          L.value=c.letra; L.font=F({bold:true,color:{argb:"FFB8BDC4"}}); L.fill=fill(C.fundo);
+          L.alignment={horizontal:"center",vertical:"middle"};
+          V.value="—"; V.font=F({color:{argb:"FFB8BDC4"}}); V.alignment={horizontal:"center"};
+        }
+      });
+      // contorno do bloco
+      ws.getCell(r,col).border={top:fina(C.preto),left:fina(C.preto)};
+      ws.getCell(r,col+2).border={top:fina(C.preto),right:fina(C.preto)};
+    });
+    ws.getRow(r).height=19; ws.getRow(r+1).height=13;
+    for(let k=2;k<5;k++) ws.getRow(r+k).height=18;
+    r+=6;
+  }
+  if(!lista.length){
+    ws.mergeCells(r,2,r,12);
+    ws.getCell(r,2).value="Nenhum posto cadastrado ainda."; ws.getCell(r,2).font=F({italic:true,color:{argb:C.fraco}});
+    r+=2;
+  }
+
+  // --- legenda ---
+  ws.mergeCells(r,2,r,12);
+  const leg=ws.getCell(r,2);
+  leg.value={richText:[
+    {text:"Legenda:  ",font:F({bold:true,size:9,color:{argb:C.fraco}})},
+    {text:"■ ",font:F({size:10,color:{argb:"FF16A34A"}})},{text:"A Etanol   ",font:F({size:9,color:{argb:C.fraco}})},
+    {text:"■ ",font:F({size:10,color:{argb:"FFD52B2B"}})},{text:"G Gasolina   ",font:F({size:9,color:{argb:C.fraco}})},
+    {text:"■ ",font:F({size:10,color:{argb:"FF6B7280"}})},{text:"D Diesel S10      ",font:F({size:9,color:{argb:C.fraco}})},
+    {text:"Nível: ",font:F({bold:true,size:9,color:{argb:C.fraco}})},
+    {text:"acima de 50% ",font:F({bold:true,size:9,color:{argb:C.okT}})},
+    {text:"· 21–50% ",font:F({bold:true,size:9,color:{argb:C.avT}})},
+    {text:"· até "+Math.round(LIM*100)+"%",font:F({bold:true,size:9,color:{argb:C.baT}})}]};
+  leg.alignment={horizontal:"left",vertical:"middle"};
+
+  // =====================================================================
+  // ABA 2 — RESUMO POR POSTO (uma linha por posto)
+  // =====================================================================
+  const wr=wb.addWorksheet("Resumo por posto",{
+    views:[{state:"frozen",ySplit:4,showGridLines:false}],
+    pageSetup:{paperSize:9,orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,horizontalCentered:true,
+      margins:{left:0.3,right:0.3,top:0.4,bottom:0.5,header:0.2,footer:0.25}}});
+  wr.columns=[{width:2},{width:26},{width:18},{width:14},{width:14},{width:14},{width:15},{width:11},{width:16},{width:2}];
+  faixa(wr,10,"Resumo de estoque por posto");
+  const cabR=["Posto","Cidade","Etanol","Gasolina","Diesel S10","Total","Ocupação","Situação"];
+  const corCab=[C.preto,C.preto,COMBS[0].cor,COMBS[1].cor,COMBS[2].cor,C.preto,C.preto,C.preto];
+  cabR.forEach((t,i)=>{
+    const c=wr.getCell(4,i+2);
+    c.value=t; c.font=F({bold:true,size:10,color:{argb:i>=2&&i<=4?C.branco:C.ouro}});
+    c.fill=fill(corCab[i]); c.alignment={horizontal:i<2?"left":"center",vertical:"middle"};
+    c.border=caixa(C.preto);
+  });
+  wr.getRow(4).height=22;
+  let rr=5;
+  lista.forEach((p,idx)=>{
+    const tot=COMBS.reduce((a,c)=>a+p.ag[c.nome].e,0), cap=COMBS.reduce((a,c)=>a+p.ag[c.nome].c,0);
+    const vals=[p.apelido,p.cidade||"",
+      p.ag["Etanol"].n?p.ag["Etanol"].e:null, p.ag["Gasolina Comum"].n?p.ag["Gasolina Comum"].e:null,
+      p.ag["Diesel S10"].n?p.ag["Diesel S10"].e:null, tot, cap>0?tot/cap:null,
+      p.minPct===null?"Sem tanques":nivel(p.minPct).txt];
+    vals.forEach((v,i)=>{
+      const c=wr.getCell(rr,i+2);
+      c.value=v===null?"—":v;
+      c.font=F({size:10,bold:i===0||i===5,color:{argb:v===null?"FFB8BDC4":C.texto}});
+      c.border={bottom:fina()};
+      if(idx%2) c.fill=fill(C.zebra);
+      c.alignment={horizontal:i<2?"left":"center",vertical:"middle"};
+      if(i>=2&&i<=5&&v!==null){ c.numFmt='#,##0'; c.alignment={horizontal:"right",vertical:"middle"}; }
+      if(i===6&&v!==null) c.numFmt="0%";
+    });
+    if(p.minPct!==null){
+      const nv=nivel(p.minPct), s=wr.getCell(rr,9);
+      s.fill=fill(nv.f); s.font=F({bold:true,size:10,color:{argb:nv.t}});
+    }
+    wr.getRow(rr).height=18; rr++;
+  });
+  // linha de total
+  const totVals=["TOTAL DA REDE","",rede["Etanol"].e,rede["Gasolina Comum"].e,rede["Diesel S10"].e,totalGeral,capGeral>0?totalGeral/capGeral:null,""];
+  totVals.forEach((v,i)=>{
+    const c=wr.getCell(rr,i+2);
+    c.value=v===null?"—":v; c.fill=fill(C.preto);
+    c.font=F({bold:true,size:11,color:{argb:C.ouro}});
+    c.alignment={horizontal:i<2?"left":(i>=2&&i<=5?"right":"center"),vertical:"middle"};
+    if(i>=2&&i<=5) c.numFmt='#,##0';
+    if(i===6&&v!==null) c.numFmt="0%";
+  });
+  wr.getRow(rr).height=22;
+  wr.getCell(rr+1,2).value="Valores em litros. Situação considera o tanque mais baixo de cada posto.";
+  wr.getCell(rr+1,2).font=F({italic:true,size:9,color:{argb:C.fraco}});
+  if(lista.length) wr.autoFilter={from:{row:4,column:2},to:{row:4,column:9}};
+  wr.pageSetup.printTitlesRow="4:4";
+
+  // =====================================================================
+  // ABA 3 — DETALHE POR TANQUE
+  // =====================================================================
+  const wd=wb.addWorksheet("Detalhe por tanque",{
+    views:[{state:"frozen",ySplit:4,showGridLines:false}],
+    pageSetup:{paperSize:9,orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,horizontalCentered:true,
+      margins:{left:0.3,right:0.3,top:0.4,bottom:0.5,header:0.2,footer:0.25}}});
+  wd.columns=[{width:2},{width:24},{width:16},{width:17},{width:16},{width:9},{width:15},{width:14},{width:10},{width:18},{width:2}];
+  faixa(wd,11,"Detalhe de estoque por tanque");
+  ["Posto","Cidade","CNPJ","Combustível","Tanque","Capacidade (L)","Estoque (L)","Nível","Atualizado em"].forEach((t,i)=>{
+    const c=wd.getCell(4,i+2);
+    c.value=t; c.font=F({bold:true,size:10,color:{argb:C.ouro}}); c.fill=fill(C.preto);
+    c.alignment={horizontal:i<4?"left":"center",vertical:"middle"}; c.border=caixa(C.preto);
+  });
+  wd.getRow(4).height=22;
+  const numTq=x=>{ const m=(x.numero||"").match(/\d+/); return m?parseInt(m[0],10):9999; };
+  let rd=5, zebra=0;
+  lista.forEach(p=>{
+    [...p.tanques].sort((a,b)=>numTq(a)-numTq(b)).forEach((x,k)=>{
+      const cb=COMBS.find(c=>c.nome===x.combustivel)||COMBS[2];
+      const pct=Number(x.capacidade)>0?Number(x.estoque)/Number(x.capacidade):0;
+      const vals=[k===0?p.apelido:"",k===0?(p.cidade||""):"",k===0?p.cnpj:"",x.combustivel,x.numero,
+        Number(x.capacidade),Number(x.estoque),pct,x.atualizado_em?new Date(x.atualizado_em):""];
+      vals.forEach((v,i)=>{
+        const c=wd.getCell(rd,i+2);
+        c.value=v; c.font=F({size:10,bold:i===0});
+        c.alignment={horizontal:i<4?"left":"center",vertical:"middle"};
+        c.border={bottom:fina()};
+        if(zebra%2) c.fill=fill(C.zebra);
+      });
+      const cc=wd.getCell(rd,5);
+      cc.value={richText:[{text:"● ",font:F({size:10,color:{argb:cb.cor}})},{text:x.combustivel,font:F({size:10})}]};
+      wd.getCell(rd,7).numFmt='#,##0'; wd.getCell(rd,7).alignment={horizontal:"right"};
+      wd.getCell(rd,8).numFmt='#,##0'; wd.getCell(rd,8).alignment={horizontal:"right"};
+      wd.getCell(rd,8).font=F({size:10,bold:true});
+      const nv=nivel(pct), pc=wd.getCell(rd,9);
+      pc.numFmt="0%"; pc.fill=fill(nv.f); pc.font=F({size:10,bold:true,color:{argb:nv.t}});
+      wd.getCell(rd,10).numFmt="dd/mm/yyyy hh:mm";
+      wd.getRow(rd).height=17; rd++;
+    });
+    // linha separadora entre postos
+    if(p.tanques.length){ for(let c=2;c<=10;c++) wd.getCell(rd-1,c).border={bottom:fina("FF9CA3AF")}; zebra++; }
+  });
+  if(rd>5) wd.autoFilter={from:{row:4,column:2},to:{row:4,column:10}};
+  wd.pageSetup.printTitlesRow="4:4";
+
+  return wb;
+}
+async function gerarPlanilha(){
+  const btn=$("btnPlanilha"); const txt=btn.textContent;
+  btn.disabled=true; btn.textContent="Gerando...";
+  try{
+    if(typeof ExcelJS==="undefined") throw new Error("componente de Excel não carregou. Recarregue a página.");
+    const { data:postos, error:e1 } = await sb.from("postos").select("*").eq("is_admin",false);
+    if(e1) throw e1;
+    const { data:tks, error:e2 } = await sb.from("tanques").select("*");
+    if(e2) throw e2;
+    const lista=(postos||[]).map(p=>({ ...p, apelido:apelidoPosto(p.nome), tanques:(tks||[]).filter(x=>x.posto_id===p.id) }))
+      .sort((a,b)=>a.apelido.localeCompare(b.apelido,"pt"));
+    const agora=new Date();
+    const wb=montarPlanilha(lista, agora);
+    const buf=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="estoque_rede_"+dataArquivo(agora)+".xlsx";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+  }catch(e){
+    alert("Não foi possível gerar a planilha: "+(e.message||e));
+  }finally{
+    btn.disabled=false; btn.textContent=txt;
+  }
 }
 
 /* ---------------- INÍCIO ---------------- */
