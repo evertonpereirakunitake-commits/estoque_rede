@@ -150,6 +150,15 @@ td input{width:110px;}
 .env-chip button:hover{color:#7a5c07;}
 .env-vazio{color:var(--texto-fraco);font-size:13px;padding:10px 0;}
 
+/* ---------- posição na planilha (admin) ---------- */
+.org-planilha{display:grid;grid-template-columns:170px 120px auto 1fr;gap:10px;align-items:end;
+  background:#fcf6e3;border:1px solid #f0d97a;border-radius:12px;padding:12px 14px;margin-bottom:20px;}
+.org-planilha .tit{grid-column:1/-1;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#7a5c07;}
+.org-planilha label.campo{margin:0 0 4px;}
+.org-planilha input,.org-planilha select{padding:8px 10px;font-size:14px;}
+.org-planilha button{padding:9px 16px;font-size:14px;}
+@media(max-width:700px){.org-planilha{grid-template-columns:1fr 1fr;}}
+
 /* ---------- topo do detalhe (admin) ---------- */
 .detalhe-topo{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
 .detalhe-topo .tit{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:26px;letter-spacing:.5px;line-height:1;}
@@ -302,6 +311,15 @@ td input{width:110px;}
         <button class="voltar" onclick="voltarLista()">← Voltar</button>
         <div><div class="tit" id="detNome"></div><div class="ci" id="detCidade"></div></div>
       </div>
+      <div class="org-planilha">
+        <div class="tit">Lugar deste posto na planilha de estoque</div>
+        <div><label class="campo">Coluna</label>
+          <select id="orgColuna"><option value="">Automática</option><option value="1">Coluna 1</option>
+            <option value="2">Coluna 2</option><option value="3">Coluna 3</option><option value="4">Coluna 4</option></select></div>
+        <div><label class="campo">Posição</label><input id="orgOrdem" type="number" min="1" placeholder="Ex.: 3"></div>
+        <div><button class="ouro" onclick="salvarOrgPlanilha()">Salvar</button></div>
+        <div style="font-size:12px;color:#7a5c07;align-self:center;">Coluna 1 a 4 e posição dentro da coluna (1 = primeiro). "Automática" coloca o posto no fim da coluna mais curta.</div>
+      </div>
       <div id="detCards" class="cards-comb"></div>
 
       <div style="margin-top:26px;">
@@ -350,6 +368,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
 let postoAtual = null;
 let tanques = [];
 let dadosAdmin = [];
+let postoAbertoId = null;
 
 const $ = id => document.getElementById(id);
 const soNumeros = t => (t||"").replace(/\D/g,"");
@@ -546,6 +565,9 @@ async function abrirPosto(id){
   const p=dadosAdmin.find(x=>x.id===id); if(!p) return;
   $("detNome").textContent=p.nome;
   $("detCidade").textContent=(p.cidade||"—")+" · CNPJ "+p.cnpj;
+  postoAbertoId=p.id;
+  $("orgColuna").value=p.coluna?String(p.coluna):"";
+  $("orgOrdem").value=p.ordem??"";
 
   const t=totaisPosto(p);
   const capT={"Gasolina Comum":0,"Etanol":0,"Diesel S10":0};
@@ -733,6 +755,18 @@ async function baixarDescargaAdmin(id, postoId){
   carregarDetalheExtra(postoId);
 }
 
+async function salvarOrgPlanilha(){
+  const p=dadosAdmin.find(x=>x.id===postoAbertoId); if(!p) return;
+  const coluna=$("orgColuna").value?Number($("orgColuna").value):null;
+  const ordemTxt=$("orgOrdem").value.trim();
+  const ordem=ordemTxt===""?null:Number(ordemTxt);
+  if(ordem!==null && (!Number.isInteger(ordem)||ordem<1)) return alert("A posição precisa ser um número inteiro a partir de 1.");
+  const { error } = await sb.from("postos").update({ coluna, ordem }).eq("id",p.id);
+  if(error) return alert("Não foi possível salvar: "+error.message);
+  Object.assign(p,{coluna,ordem});
+  alert("Salvo. A próxima planilha já sai com essa organização.");
+}
+
 /* ---------- PLANILHA DE ESTOQUE (EXCEL) ---------- */
 // Nome curto do posto para a planilha (tira "Auto Posto", "Benedetti", "Ltda"...)
 function apelidoPosto(nome){
@@ -745,6 +779,23 @@ function apelidoPosto(nome){
   s=s.replace(/\s+(E|ME)$/,"").trim();
   return s || (nome||"").toUpperCase();
 }
+// Organização da planilha: cada posto tem "coluna" (1 a 4) e "ordem" (posição dentro da coluna).
+// Posto sem coluna definida entra no fim da coluna com menos postos, para manter tudo em 1 folha.
+const COLUNAS_PLANILHA=4;
+function gruposColunas(lista){
+  const n=Math.max(COLUNAS_PLANILHA,...lista.map(p=>p.coluna||0));
+  const g=[...Array(n)].map(()=>[]);
+  const semColuna=[];
+  lista.forEach(p=>{ if(p.coluna>=1) g[p.coluna-1].push(p); else semColuna.push(p); });
+  g.forEach(c=>c.sort((a,b)=>(a.ordem??9999)-(b.ordem??9999)||a.apelido.localeCompare(b.apelido,"pt")));
+  semColuna.sort((a,b)=>a.apelido.localeCompare(b.apelido,"pt")).forEach(p=>{
+    let menor=0; g.forEach((c,i)=>{ if(c.length<g[menor].length) menor=i; });
+    g[menor].push(p);
+  });
+  return g;
+}
+// Mesma sequência da planilha: coluna 1 inteira, depois coluna 2, e assim por diante.
+function ordenarComoPlanilha(lista){ return gruposColunas(lista).flat(); }
 function dataArquivo(d){
   const p=n=>String(n).padStart(2,"0");
   return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"_"+p(d.getHours())+"h"+p(d.getMinutes());
@@ -810,48 +861,25 @@ function montarPlanilha(lista, agora){
   }
 
   // =====================================================================
-  // ABA 1 — QUADRO DE ESTOQUE (formato do setor de estoque, 4 postos por linha, 1 folha)
+  // ABA 1 — QUADRO DE ESTOQUE (4 colunas na sequência definida, 1 folha)
   // colunas: A margem | B C D posto1 | E esp | F G H posto2 | I esp | J K L posto3 | M margem
   // =====================================================================
+  const grupos=gruposColunas(lista);
+  const nG=grupos.length;
   const ws=wb.addWorksheet("Quadro de estoque",{
     views:[{showGridLines:false}],
     pageSetup:{paperSize:9,orientation:"portrait",fitToPage:true,fitToWidth:1,fitToHeight:1,horizontalCentered:true,
       margins:{left:0.25,right:0.25,top:0.3,bottom:0.35,header:0.15,footer:0.15}}});
-  // colunas: A margem | B C D | E | F G H | I | J K L | M | N O P | Q margem
-  ws.columns=[{width:1.5},
-    {width:4},{width:13},{width:7},{width:1.5},
-    {width:4},{width:13},{width:7},{width:1.5},
-    {width:4},{width:13},{width:7},{width:1.5},
-    {width:4},{width:13},{width:7},{width:1.5}];
-  const ULT=17;
+  // colunas: A margem | [letra litros %] espaço | [letra litros %] espaço | ... | margem
+  const cols=[{width:1.5}];
+  for(let g=0;g<nG;g++) cols.push({width:4},{width:13},{width:7},{width:1.5});
+  ws.columns=cols;
+  const ULT=cols.length;
+  const colIni=g=>2+g*4;
   faixa(ws,ULT,"Estoque de combustível por posto");
-  const BLOCO=[2,6,10,14]; // coluna inicial de cada bloco (letra, litros, %)
 
-  // --- cartões de resumo: etanol, gasolina, diesel e total geral ---
+  // --- faixa de indicadores (sem somas) ---
   let r=4;
-  const cards=COMBS.map(c=>({tit:c.curto,cor:c.cor,claro:c.claro,e:rede[c.nome].e,c:rede[c.nome].c,txtCor:C.branco}));
-  cards.push({tit:"TOTAL GERAL",cor:C.preto,claro:C.ouroClaro,e:totalGeral,c:capGeral,txtCor:C.ouro});
-  cards.forEach((k,i)=>{
-    const col=BLOCO[i];
-    for(let q=0;q<3;q++) ws.mergeCells(r+q,col,r+q,col+2);
-    const h=ws.getCell(r,col);
-    h.value=k.tit; h.font=F({bold:true,size:9,color:{argb:k.txtCor}});
-    h.fill=fill(k.cor); h.alignment={horizontal:"center",vertical:"middle"};
-    const v=ws.getCell(r+1,col);
-    v.value=k.e; v.numFmt=LITROS; v.font=F({bold:true,size:15,color:{argb:C.texto}});
-    v.fill=fill(k.claro); v.alignment={horizontal:"center",vertical:"middle"};
-    const s2=ws.getCell(r+2,col);
-    s2.value=k.c>0?(Math.round(k.e/k.c*100)+"% de "+k.c.toLocaleString("pt-BR")+" L"):"Sem tanques";
-    s2.font=F({size:8,color:{argb:C.fraco}}); s2.fill=fill(k.claro); s2.alignment={horizontal:"center",vertical:"middle"};
-    for(let q=0;q<3;q++) for(let cc=col;cc<=col+2;cc++){
-      ws.getCell(r+q,cc).border={left:cc===col?fina(k.cor):undefined,right:cc===col+2?fina(k.cor):undefined,
-        top:q===0?fina(k.cor):undefined,bottom:q===2?fina(k.cor):undefined};
-    }
-  });
-  ws.getRow(r).height=14; ws.getRow(r+1).height=22; ws.getRow(r+2).height=12;
-
-  // --- faixa de indicadores ---
-  r=8; ws.getRow(7).height=6;
   ws.mergeCells(r,2,r,ULT-1);
   const ind=ws.getCell(r,2);
   ind.value={richText:[
@@ -867,17 +895,19 @@ function montarPlanilha(lista, agora){
     {text:"≤"+Math.round(LIM*100)+"%",font:F({bold:true,size:8,color:{argb:C.baT}})}]};
   ind.fill=fill(C.ouroClaro); ind.alignment={horizontal:"center",vertical:"middle"};
   ind.border={top:fina(C.ouro),bottom:fina(C.ouro)};
-  ws.getRow(r).height=17; ws.getRow(9).height=6;
+  ws.getRow(r).height=17; ws.getRow(5).height=8;
 
-  // --- blocos de posto (4 por linha) ---
-  r=10;
-  for(let i=0;i<lista.length;i+=4){
-    lista.slice(i,i+4).forEach((p,j)=>{
-      const col=BLOCO[j];
+  // --- postos de cada coluna, um embaixo do outro ---
+  const maxLen=Math.max(0,...grupos.map(g=>g.length));
+  r=6;
+  for(let i=0;i<maxLen;i++){
+    grupos.forEach((g,gi)=>{
+      const p=g[i]; if(!p) return;
+      const col=colIni(gi);
       ws.mergeCells(r,col,r,col+2);
       const n=ws.getCell(r,col);
-      n.value=p.apelido; n.font=F({bold:true,size:9,color:{argb:C.ouro}});
-      n.fill=fill(C.preto); n.alignment={horizontal:"center",vertical:"middle",shrinkToFit:true};
+      n.value=p.apelido; n.font=F({bold:true,size:p.apelido.length>26?8:9,color:{argb:C.ouro}});
+      n.fill=fill(C.preto); n.alignment={horizontal:"center",vertical:"middle",wrapText:true};
       COMBS.forEach((c,k)=>{
         const rr=r+1+k, ag=p.ag[c.nome];
         const L=ws.getCell(rr,col), V=ws.getCell(rr,col+1), P=ws.getCell(rr,col+2);
@@ -896,7 +926,8 @@ function montarPlanilha(lista, agora){
         }
       });
     });
-    ws.getRow(r).height=14;
+    const longo=grupos.some(g=>g[i]&&g[i].apelido.length>26);
+    ws.getRow(r).height=longo?22:14;
     for(let k=1;k<=3;k++) ws.getRow(r+k).height=13;
     ws.getRow(r+4).height=5;
     r+=5;
@@ -905,7 +936,7 @@ function montarPlanilha(lista, agora){
     ws.mergeCells(r,2,r,ULT-1);
     ws.getCell(r,2).value="Nenhum posto cadastrado ainda."; ws.getCell(r,2).font=F({italic:true,color:{argb:C.fraco}});
   }
-  ws.pageSetup.printArea="A1:Q"+Math.max(r,10);
+  ws.pageSetup.printArea="A1:"+ws.getColumn(ULT).letter+Math.max(r,6);
 
   // =====================================================================
   // ABA 2 — RESUMO POR POSTO (uma linha por posto)
@@ -914,7 +945,7 @@ function montarPlanilha(lista, agora){
     views:[{state:"frozen",ySplit:4,showGridLines:false}],
     pageSetup:{paperSize:9,orientation:"portrait",fitToPage:true,fitToWidth:1,fitToHeight:1,horizontalCentered:true,
       margins:{left:0.25,right:0.25,top:0.3,bottom:0.35,header:0.15,footer:0.15}}});
-  wr.columns=[{width:2},{width:26},{width:18},{width:14},{width:14},{width:14},{width:15},{width:11},{width:16},{width:2}];
+  wr.columns=[{width:2},{width:44},{width:18},{width:14},{width:14},{width:14},{width:15},{width:11},{width:16},{width:2}];
   faixa(wr,10,"Resumo de estoque por posto");
   const cabR=["Posto","Cidade","Etanol","Gasolina","Diesel S10","Total","Ocupação","Situação"];
   const corCab=[C.preto,C.preto,COMBS[0].cor,COMBS[1].cor,COMBS[2].cor,C.preto,C.preto,C.preto];
@@ -926,7 +957,9 @@ function montarPlanilha(lista, agora){
   });
   wr.getRow(4).height=22;
   let rr=5;
-  lista.forEach((p,idx)=>{
+  let idx=0;
+  ordenarComoPlanilha(lista).forEach(p=>{
+    idx++;
     const tot=COMBS.reduce((a,c)=>a+p.ag[c.nome].e,0), cap=COMBS.reduce((a,c)=>a+p.ag[c.nome].c,0);
     const vals=[p.apelido,(p.cidade||"").toUpperCase(),
       p.ag["Etanol"].n?p.ag["Etanol"].e:null, p.ag["Gasolina Comum"].n?p.ag["Gasolina Comum"].e:null,
@@ -961,7 +994,6 @@ function montarPlanilha(lista, agora){
   wr.getRow(rr).height=22;
   wr.getCell(rr+1,2).value="Valores em litros. Situação considera o tanque mais baixo de cada posto.";
   wr.getCell(rr+1,2).font=F({italic:true,size:9,color:{argb:C.fraco}});
-  if(lista.length) wr.autoFilter={from:{row:4,column:2},to:{row:4,column:9}};
   wr.pageSetup.printTitlesRow="4:4";
 
   // =====================================================================
@@ -971,7 +1003,7 @@ function montarPlanilha(lista, agora){
     views:[{state:"frozen",ySplit:4,showGridLines:false}],
     pageSetup:{paperSize:9,orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,horizontalCentered:true,
       margins:{left:0.3,right:0.3,top:0.4,bottom:0.5,header:0.2,footer:0.25}}});
-  wd.columns=[{width:2},{width:24},{width:16},{width:17},{width:16},{width:9},{width:15},{width:14},{width:10},{width:18},{width:2}];
+  wd.columns=[{width:2},{width:40},{width:16},{width:17},{width:16},{width:9},{width:15},{width:14},{width:10},{width:18},{width:2}];
   faixa(wd,11,"Detalhe de estoque por tanque");
   ["Posto","Cidade","CNPJ","Combustível","Tanque","Capacidade (L)","Estoque (L)","Nível","Atualizado em"].forEach((t,i)=>{
     const c=wd.getCell(4,i+2);
@@ -981,7 +1013,7 @@ function montarPlanilha(lista, agora){
   wd.getRow(4).height=22;
   const numTq=x=>{ const m=(x.numero||"").match(/\d+/); return m?parseInt(m[0],10):9999; };
   let rd=5, zebra=0;
-  lista.forEach(p=>{
+  ordenarComoPlanilha(lista).forEach(p=>{
     [...p.tanques].sort((a,b)=>numTq(a)-numTq(b)).forEach((x,k)=>{
       const cb=COMBS.find(c=>c.nome===x.combustivel)||COMBS[2];
       const pct=Number(x.capacidade)>0?Number(x.estoque)/Number(x.capacidade):0;
@@ -1021,8 +1053,10 @@ async function gerarPlanilha(){
     if(e1) throw e1;
     const { data:tks, error:e2 } = await sb.from("tanques").select("*");
     if(e2) throw e2;
-    const lista=(postos||[]).map(p=>({ ...p, apelido:apelidoPosto(p.nome), tanques:(tks||[]).filter(x=>x.posto_id===p.id) }))
-      .sort((a,b)=>a.apelido.localeCompare(b.apelido,"pt"));
+    const lista=(postos||[]).map(p=>({ ...p,
+      apelido:(p.nome||"").replace(/\s+/g," ").trim(),
+      coluna:Number(p.coluna)||null, ordem:p.ordem==null?null:Number(p.ordem),
+      tanques:(tks||[]).filter(x=>x.posto_id===p.id) }));
     const agora=new Date();
     const wb=montarPlanilha(lista, agora);
     const buf=await wb.xlsx.writeBuffer();
