@@ -737,9 +737,12 @@ async function baixarDescargaAdmin(id, postoId){
 // Nome curto do posto para a planilha (tira "Auto Posto", "Benedetti", "Ltda"...)
 function apelidoPosto(nome){
   let s=(nome||"").toUpperCase();
-  [/AUTO\s*POSTO/g,/\bPOSTO\b/g,/\bBENEDETTI\b/g,/\bLTDA\.?/g,/\bEIRELI\b/g,/\bS\/A\b/g,
-   /CENTRO DE ABASTECIMENTO DE COMBUST[IÍ]VEIS/g].forEach(r=>{ s=s.replace(r," "); });
-  s=s.replace(/\s+/g," ").trim().replace(/^(DE|DO|DA)\s+/,"").replace(/\s+(ME)$/,"").trim();
+  [/AUTO\s*POSTO/g,/\bPOSTO\b/g,/\bBENEDETTI\b/g,/LTDA\.?/g,/\bEIRELI\b/g,/\bS\/A\b/g,
+   /CENTRO DE ABASTECIMENTO DE COMBUST[IÍ]VEIS/g,/COM[EÉ]RCIO DE DERIVADOS DE PETR[OÓ]LEO/g,
+   /\bSERVI[CÇ]OS?\b/g].forEach(r=>{ s=s.replace(r," "); });
+  s=s.replace(/\s+/g," ").trim();
+  for(let i=0;i<3;i++) s=s.replace(/^(E|DE|DO|DA|DOS|DAS)\s+/,"");
+  s=s.replace(/\s+(E|ME)$/,"").trim();
   return s || (nome||"").toUpperCase();
 }
 function dataArquivo(d){
@@ -788,16 +791,17 @@ function montarPlanilha(lista, agora){
 
   const wb=new ExcelJS.Workbook();
   wb.creator="Rede Benedetti"; wb.created=agora;
+  wb.views=[{x:0,y:0,width:20000,height:12000,firstSheet:0,activeTab:0,visibility:"visible"}];
 
   // faixa de título preta com nome em dourado
   function faixa(ws, ultimaCol, subtitulo){
-    ws.getRow(1).height=34; ws.getRow(2).height=20;
+    ws.getRow(1).height=28; ws.getRow(2).height=16;
     for(let c=1;c<=ultimaCol;c++){ ws.getCell(1,c).fill=fill(C.preto); ws.getCell(2,c).fill=fill(C.preto); }
     ws.mergeCells(1,2,1,ultimaCol-1); ws.mergeCells(2,2,2,ultimaCol-1);
     const a=ws.getCell(1,2);
     a.value={richText:[
-      {text:"B  ",font:F({bold:true,size:22,color:{argb:C.ouro}})},
-      {text:"REDE BENEDETTI",font:F({bold:true,size:18,color:{argb:C.ouro}})}]};
+      {text:"B  ",font:F({bold:true,size:20,color:{argb:C.ouro}})},
+      {text:"REDE BENEDETTI",font:F({bold:true,size:16,color:{argb:C.ouro}})}]};
     a.alignment={vertical:"middle"};
     const b=ws.getCell(2,2);
     b.value=subtitulo+"   ·   gerado em "+dataTxt;
@@ -806,130 +810,110 @@ function montarPlanilha(lista, agora){
   }
 
   // =====================================================================
-  // ABA 1 — QUADRO DE ESTOQUE (formato do setor de estoque, 3 postos por linha)
+  // ABA 1 — QUADRO DE ESTOQUE (formato do setor de estoque, 4 postos por linha, 1 folha)
   // colunas: A margem | B C D posto1 | E esp | F G H posto2 | I esp | J K L posto3 | M margem
   // =====================================================================
   const ws=wb.addWorksheet("Quadro de estoque",{
     views:[{showGridLines:false}],
-    pageSetup:{paperSize:9,orientation:"portrait",fitToPage:true,fitToWidth:1,fitToHeight:0,horizontalCentered:true,
-      margins:{left:0.3,right:0.3,top:0.4,bottom:0.5,header:0.2,footer:0.25}}});
-  ws.columns=[{width:2},{width:5},{width:15},{width:9},{width:2},{width:5},{width:15},{width:9},{width:2},{width:5},{width:15},{width:9},{width:2}];
-  faixa(ws,13,"Estoque de combustível por posto");
-  const BLOCO=[2,6,10]; // coluna inicial de cada bloco (letra, litros, %)
+    pageSetup:{paperSize:9,orientation:"portrait",fitToPage:true,fitToWidth:1,fitToHeight:1,horizontalCentered:true,
+      margins:{left:0.25,right:0.25,top:0.3,bottom:0.35,header:0.15,footer:0.15}}});
+  // colunas: A margem | B C D | E | F G H | I | J K L | M | N O P | Q margem
+  ws.columns=[{width:1.5},
+    {width:4},{width:13},{width:7},{width:1.5},
+    {width:4},{width:13},{width:7},{width:1.5},
+    {width:4},{width:13},{width:7},{width:1.5},
+    {width:4},{width:13},{width:7},{width:1.5}];
+  const ULT=17;
+  faixa(ws,ULT,"Estoque de combustível por posto");
+  const BLOCO=[2,6,10,14]; // coluna inicial de cada bloco (letra, litros, %)
 
-  // --- cards de resumo da rede ---
+  // --- cartões de resumo: etanol, gasolina, diesel e total geral ---
   let r=4;
-  COMBS.forEach((c,i)=>{
-    const col=BLOCO[i], tot=rede[c.nome];
-    ws.mergeCells(r,col,r,col+2); ws.mergeCells(r+1,col,r+1,col+2); ws.mergeCells(r+2,col,r+2,col+2);
+  const cards=COMBS.map(c=>({tit:c.curto,cor:c.cor,claro:c.claro,e:rede[c.nome].e,c:rede[c.nome].c,txtCor:C.branco}));
+  cards.push({tit:"TOTAL GERAL",cor:C.preto,claro:C.ouroClaro,e:totalGeral,c:capGeral,txtCor:C.ouro});
+  cards.forEach((k,i)=>{
+    const col=BLOCO[i];
+    for(let q=0;q<3;q++) ws.mergeCells(r+q,col,r+q,col+2);
     const h=ws.getCell(r,col);
-    h.value=c.curto+" · TOTAL DA REDE"; h.font=F({bold:true,size:10,color:{argb:C.branco}});
-    h.fill=fill(c.cor); h.alignment={horizontal:"center",vertical:"middle"};
+    h.value=k.tit; h.font=F({bold:true,size:9,color:{argb:k.txtCor}});
+    h.fill=fill(k.cor); h.alignment={horizontal:"center",vertical:"middle"};
     const v=ws.getCell(r+1,col);
-    v.value=tot.e; v.numFmt=LITROS; v.font=F({bold:true,size:20,color:{argb:C.texto}});
-    v.fill=fill(c.claro); v.alignment={horizontal:"center",vertical:"middle"};
-    const s=ws.getCell(r+2,col);
-    s.value=tot.c>0?(Math.round(tot.e/tot.c*100)+"% de "+tot.c.toLocaleString("pt-BR")+" L de capacidade"):"Sem tanques cadastrados";
-    s.font=F({size:9,color:{argb:C.fraco}}); s.fill=fill(c.claro); s.alignment={horizontal:"center",vertical:"middle"};
-    for(let k=0;k<3;k++) for(let cc=col;cc<=col+2;cc++){
-      const cell=ws.getCell(r+k,cc);
-      cell.border={left:cc===col?fina(c.cor):undefined,right:cc===col+2?fina(c.cor):undefined,
-                   top:k===0?fina(c.cor):undefined,bottom:k===2?fina(c.cor):undefined};
+    v.value=k.e; v.numFmt=LITROS; v.font=F({bold:true,size:15,color:{argb:C.texto}});
+    v.fill=fill(k.claro); v.alignment={horizontal:"center",vertical:"middle"};
+    const s2=ws.getCell(r+2,col);
+    s2.value=k.c>0?(Math.round(k.e/k.c*100)+"% de "+k.c.toLocaleString("pt-BR")+" L"):"Sem tanques";
+    s2.font=F({size:8,color:{argb:C.fraco}}); s2.fill=fill(k.claro); s2.alignment={horizontal:"center",vertical:"middle"};
+    for(let q=0;q<3;q++) for(let cc=col;cc<=col+2;cc++){
+      ws.getCell(r+q,cc).border={left:cc===col?fina(k.cor):undefined,right:cc===col+2?fina(k.cor):undefined,
+        top:q===0?fina(k.cor):undefined,bottom:q===2?fina(k.cor):undefined};
     }
   });
-  ws.getRow(r).height=18; ws.getRow(r+1).height=30; ws.getRow(r+2).height=16;
+  ws.getRow(r).height=14; ws.getRow(r+1).height=22; ws.getRow(r+2).height=12;
 
   // --- faixa de indicadores ---
-  r=8;
-  ws.mergeCells(r,2,r,12);
+  r=8; ws.getRow(7).height=6;
+  ws.mergeCells(r,2,r,ULT-1);
   const ind=ws.getCell(r,2);
   ind.value={richText:[
-    {text:lista.length+" postos   ·   ",font:F({bold:true,size:10})},
-    {text:"Total geral: ",font:F({size:10,color:{argb:C.fraco}})},
-    {text:totalGeral.toLocaleString("pt-BR")+" L",font:F({bold:true,size:10})},
-    {text:capGeral>0?(" ("+Math.round(totalGeral/capGeral*100)+"% da capacidade)   ·   "):"   ·   ",font:F({size:10,color:{argb:C.fraco}})},
+    {text:lista.length+" postos   ·   ",font:F({bold:true,size:9})},
     {text:postosBaixo+(postosBaixo===1?" posto":" postos")+" com tanque abaixo de "+Math.round(LIM*100)+"%",
-     font:F({bold:true,size:10,color:{argb:postosBaixo?C.baT:C.okT}})}]};
+     font:F({bold:true,size:9,color:{argb:postosBaixo?C.baT:C.okT}})},
+    {text:"      Legenda:  ",font:F({bold:true,size:8,color:{argb:C.fraco}})},
+    {text:"■ ",font:F({size:9,color:{argb:"FF16A34A"}})},{text:"A Etanol  ",font:F({size:8,color:{argb:C.fraco}})},
+    {text:"■ ",font:F({size:9,color:{argb:"FFD52B2B"}})},{text:"G Gasolina  ",font:F({size:8,color:{argb:C.fraco}})},
+    {text:"■ ",font:F({size:9,color:{argb:"FF6B7280"}})},{text:"D Diesel   ·   ",font:F({size:8,color:{argb:C.fraco}})},
+    {text:">50% ",font:F({bold:true,size:8,color:{argb:C.okT}})},
+    {text:"21–50% ",font:F({bold:true,size:8,color:{argb:C.avT}})},
+    {text:"≤"+Math.round(LIM*100)+"%",font:F({bold:true,size:8,color:{argb:C.baT}})}]};
   ind.fill=fill(C.ouroClaro); ind.alignment={horizontal:"center",vertical:"middle"};
   ind.border={top:fina(C.ouro),bottom:fina(C.ouro)};
-  ws.getRow(r).height=22;
+  ws.getRow(r).height=17; ws.getRow(9).height=6;
 
-  // --- título da seção ---
+  // --- blocos de posto (4 por linha) ---
   r=10;
-  ws.mergeCells(r,2,r,12);
-  const sec=ws.getCell(r,2);
-  sec.value="ESTOQUE POR POSTO"; sec.font=F({bold:true,size:12,color:{argb:C.preto}});
-  sec.border={bottom:{style:"medium",color:{argb:C.ouro}}};
-  ws.getRow(r).height=20;
-
-  // --- blocos de posto (3 por linha) ---
-  r=12;
-  for(let i=0;i<lista.length;i+=3){
-    lista.slice(i,i+3).forEach((p,j)=>{
+  for(let i=0;i<lista.length;i+=4){
+    lista.slice(i,i+4).forEach((p,j)=>{
       const col=BLOCO[j];
-      // nome
       ws.mergeCells(r,col,r,col+2);
       const n=ws.getCell(r,col);
-      n.value=p.apelido; n.font=F({bold:true,size:11,color:{argb:C.ouro}});
-      n.fill=fill(C.preto); n.alignment={horizontal:"center",vertical:"middle"};
-      // cidade
-      ws.mergeCells(r+1,col,r+1,col+2);
-      const ci=ws.getCell(r+1,col);
-      ci.value=(p.cidade||"").toUpperCase()||" "; ci.font=F({size:8,color:{argb:C.fraco}});
-      ci.fill=fill(C.fundo); ci.alignment={horizontal:"center",vertical:"middle"};
-      // combustíveis
+      n.value=p.apelido; n.font=F({bold:true,size:9,color:{argb:C.ouro}});
+      n.fill=fill(C.preto); n.alignment={horizontal:"center",vertical:"middle",shrinkToFit:true};
       COMBS.forEach((c,k)=>{
-        const rr=r+2+k, ag=p.ag[c.nome];
+        const rr=r+1+k, ag=p.ag[c.nome];
         const L=ws.getCell(rr,col), V=ws.getCell(rr,col+1), P=ws.getCell(rr,col+2);
         [L,V,P].forEach(x=>x.border={bottom:fina(),left:x===L?fina():undefined,right:x===P?fina():undefined});
         if(ag.n){
-          L.value=c.letra; L.font=F({bold:true,color:{argb:C.branco}}); L.fill=fill(c.cor);
+          L.value=c.letra; L.font=F({bold:true,size:9,color:{argb:C.branco}}); L.fill=fill(c.cor);
           L.alignment={horizontal:"center",vertical:"middle"};
-          V.value=ag.e; V.numFmt=LITROS; V.font=F({bold:true}); V.alignment={horizontal:"right",vertical:"middle"};
+          V.value=ag.e; V.numFmt=LITROS; V.font=F({bold:true,size:9}); V.alignment={horizontal:"right",vertical:"middle"};
           const nv=nivel(ag.pct);
-          P.value=ag.pct; P.numFmt="0%"; P.font=F({bold:true,size:10,color:{argb:nv.t}}); P.fill=fill(nv.f);
+          P.value=ag.pct; P.numFmt="0%"; P.font=F({bold:true,size:8,color:{argb:nv.t}}); P.fill=fill(nv.f);
           P.alignment={horizontal:"center",vertical:"middle"};
         }else{
-          L.value=c.letra; L.font=F({bold:true,color:{argb:"FFB8BDC4"}}); L.fill=fill(C.fundo);
+          L.value=c.letra; L.font=F({bold:true,size:9,color:{argb:"FFB8BDC4"}}); L.fill=fill(C.fundo);
           L.alignment={horizontal:"center",vertical:"middle"};
-          V.value="—"; V.font=F({color:{argb:"FFB8BDC4"}}); V.alignment={horizontal:"center"};
+          V.value="—"; V.font=F({size:9,color:{argb:"FFB8BDC4"}}); V.alignment={horizontal:"center",vertical:"middle"};
         }
       });
-      // contorno do bloco
-      ws.getCell(r,col).border={top:fina(C.preto),left:fina(C.preto)};
-      ws.getCell(r,col+2).border={top:fina(C.preto),right:fina(C.preto)};
     });
-    ws.getRow(r).height=19; ws.getRow(r+1).height=13;
-    for(let k=2;k<5;k++) ws.getRow(r+k).height=18;
-    r+=6;
+    ws.getRow(r).height=14;
+    for(let k=1;k<=3;k++) ws.getRow(r+k).height=13;
+    ws.getRow(r+4).height=5;
+    r+=5;
   }
   if(!lista.length){
-    ws.mergeCells(r,2,r,12);
+    ws.mergeCells(r,2,r,ULT-1);
     ws.getCell(r,2).value="Nenhum posto cadastrado ainda."; ws.getCell(r,2).font=F({italic:true,color:{argb:C.fraco}});
-    r+=2;
   }
-
-  // --- legenda ---
-  ws.mergeCells(r,2,r,12);
-  const leg=ws.getCell(r,2);
-  leg.value={richText:[
-    {text:"Legenda:  ",font:F({bold:true,size:9,color:{argb:C.fraco}})},
-    {text:"■ ",font:F({size:10,color:{argb:"FF16A34A"}})},{text:"A Etanol   ",font:F({size:9,color:{argb:C.fraco}})},
-    {text:"■ ",font:F({size:10,color:{argb:"FFD52B2B"}})},{text:"G Gasolina   ",font:F({size:9,color:{argb:C.fraco}})},
-    {text:"■ ",font:F({size:10,color:{argb:"FF6B7280"}})},{text:"D Diesel S10      ",font:F({size:9,color:{argb:C.fraco}})},
-    {text:"Nível: ",font:F({bold:true,size:9,color:{argb:C.fraco}})},
-    {text:"acima de 50% ",font:F({bold:true,size:9,color:{argb:C.okT}})},
-    {text:"· 21–50% ",font:F({bold:true,size:9,color:{argb:C.avT}})},
-    {text:"· até "+Math.round(LIM*100)+"%",font:F({bold:true,size:9,color:{argb:C.baT}})}]};
-  leg.alignment={horizontal:"left",vertical:"middle"};
+  ws.pageSetup.printArea="A1:Q"+Math.max(r,10);
 
   // =====================================================================
   // ABA 2 — RESUMO POR POSTO (uma linha por posto)
   // =====================================================================
   const wr=wb.addWorksheet("Resumo por posto",{
     views:[{state:"frozen",ySplit:4,showGridLines:false}],
-    pageSetup:{paperSize:9,orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,horizontalCentered:true,
-      margins:{left:0.3,right:0.3,top:0.4,bottom:0.5,header:0.2,footer:0.25}}});
+    pageSetup:{paperSize:9,orientation:"portrait",fitToPage:true,fitToWidth:1,fitToHeight:1,horizontalCentered:true,
+      margins:{left:0.25,right:0.25,top:0.3,bottom:0.35,header:0.15,footer:0.15}}});
   wr.columns=[{width:2},{width:26},{width:18},{width:14},{width:14},{width:14},{width:15},{width:11},{width:16},{width:2}];
   faixa(wr,10,"Resumo de estoque por posto");
   const cabR=["Posto","Cidade","Etanol","Gasolina","Diesel S10","Total","Ocupação","Situação"];
@@ -944,7 +928,7 @@ function montarPlanilha(lista, agora){
   let rr=5;
   lista.forEach((p,idx)=>{
     const tot=COMBS.reduce((a,c)=>a+p.ag[c.nome].e,0), cap=COMBS.reduce((a,c)=>a+p.ag[c.nome].c,0);
-    const vals=[p.apelido,p.cidade||"",
+    const vals=[p.apelido,(p.cidade||"").toUpperCase(),
       p.ag["Etanol"].n?p.ag["Etanol"].e:null, p.ag["Gasolina Comum"].n?p.ag["Gasolina Comum"].e:null,
       p.ag["Diesel S10"].n?p.ag["Diesel S10"].e:null, tot, cap>0?tot/cap:null,
       p.minPct===null?"Sem tanques":nivel(p.minPct).txt];
@@ -954,7 +938,7 @@ function montarPlanilha(lista, agora){
       c.font=F({size:10,bold:i===0||i===5,color:{argb:v===null?"FFB8BDC4":C.texto}});
       c.border={bottom:fina()};
       if(idx%2) c.fill=fill(C.zebra);
-      c.alignment={horizontal:i<2?"left":"center",vertical:"middle"};
+      c.alignment={horizontal:i<2?"left":"center",vertical:"middle",shrinkToFit:i<2};
       if(i>=2&&i<=5&&v!==null){ c.numFmt='#,##0'; c.alignment={horizontal:"right",vertical:"middle"}; }
       if(i===6&&v!==null) c.numFmt="0%";
     });
@@ -962,7 +946,7 @@ function montarPlanilha(lista, agora){
       const nv=nivel(p.minPct), s=wr.getCell(rr,9);
       s.fill=fill(nv.f); s.font=F({bold:true,size:10,color:{argb:nv.t}});
     }
-    wr.getRow(rr).height=18; rr++;
+    wr.getRow(rr).height=15; rr++;
   });
   // linha de total
   const totVals=["TOTAL DA REDE","",rede["Etanol"].e,rede["Gasolina Comum"].e,rede["Diesel S10"].e,totalGeral,capGeral>0?totalGeral/capGeral:null,""];
