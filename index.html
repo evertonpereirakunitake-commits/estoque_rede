@@ -113,6 +113,63 @@ td input{width:110px;}
 .flag-baixo{position:absolute;top:14px;right:14px;background:#fdecec;color:var(--alerta);font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:4px 9px;border-radius:20px;}
 .abrir{margin-top:14px;font-size:12.5px;color:var(--texto-fraco);font-weight:600;display:flex;align-items:center;gap:5px;}
 
+@media(max-width:640px){
+  header{height:auto;min-height:64px;padding:10px 14px;flex-wrap:wrap;}
+  .header-dir{flex-wrap:wrap;gap:8px;}
+  .header-dir button{padding:8px 12px;font-size:12.5px;}
+}
+/* ---------- painel de compras: quadro igual à planilha ---------- */
+.filtros-atual{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 18px;}
+.chip-f{background:#f1f3f5;color:var(--texto);border:1px solid var(--linha);border-radius:20px;padding:7px 14px;font-size:13px;font-weight:600;}
+.chip-f:hover{background:#e6e8eb;}
+.chip-f.ativo{background:var(--preto);color:var(--ouro);border-color:var(--preto);}
+.chip-f b{font-family:"Barlow Condensed",sans-serif;font-size:15px;margin-left:4px;}
+.chip-f.ok b{color:#15803d;} .chip-f.parc b{color:#b45309;} .chip-f.pend b{color:#c81e1e;}
+.chip-f.ativo b{color:var(--ouro);}
+.grade-colunas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:start;}
+@media(max-width:1000px){.grade-colunas{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:560px){.grade-colunas{grid-template-columns:1fr;}}
+.col-postos{display:flex;flex-direction:column;gap:10px;}
+.bp{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--linha);border-radius:10px;padding:0;overflow:hidden;
+  color:var(--texto);font-family:inherit;font-weight:400;font-size:14px;cursor:pointer;transition:.15s;}
+.bp:hover{background:#fff;border-color:var(--preto);box-shadow:0 10px 22px -16px rgba(21,23,26,.5);transform:translateY(-1px);}
+.bp.pend{border:2px solid #e8a3a3;}
+.bp.parc{border:2px solid #f0cf86;}
+.bp-nome{background:var(--preto);color:var(--ouro);font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:15px;
+  letter-spacing:.4px;text-align:center;padding:6px 8px;line-height:1.15;text-transform:uppercase;}
+.bp-status{font-size:11.5px;font-weight:700;padding:4px 8px;text-align:center;line-height:1.3;}
+.bp-status.ok{background:#e7f6ec;color:#15803d;}
+.bp-status.parc{background:#fef3c7;color:#b45309;}
+.bp-status.pend{background:#fde2e2;color:#c81e1e;}
+.bp-status.sem{background:#f1f3f5;color:var(--texto-fraco);}
+.bp-linha{display:grid;grid-template-columns:28px 1fr 52px;align-items:center;border-top:1px solid var(--linha);}
+.bp-l{color:#fff;font-weight:700;font-size:13px;text-align:center;padding:5px 0;}
+.bp-l.vazio{background:#f1f3f5!important;color:#b8bdc4;}
+.bp-v{text-align:right;padding:0 8px;font-size:16px;}
+.bp-v.vazio{text-align:center;color:#b8bdc4;font-family:inherit;}
+.bp-p{text-align:center;font-weight:700;font-size:12.5px;padding:5px 0;align-self:stretch;display:flex;align-items:center;justify-content:center;}
+.nv-ok{background:#e7f6ec;color:#15803d;} .nv-av{background:#fef3c7;color:#b45309;} .nv-ba{background:#fde2e2;color:#c81e1e;}
+
+.pc-status{display:inline-block;margin-top:8px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.pc-status.ok{background:#e7f6ec;color:#15803d;}
+.pc-status.parc{background:#fef3c7;color:#b45309;}
+.pc-status.pend{background:#fde2e2;color:#c81e1e;}
+.pc-status.sem{background:#f1f3f5;color:var(--texto-fraco);}
+.posto-card.pend{border:2px solid #e8a3a3;}
+/* cartões dentro das 4 colunas: um pouco mais compactos */
+.col-postos .posto-card{padding:14px 12px;}
+.col-postos .posto-card .pc-nome{font-size:17px;}
+.col-postos .posto-card .pc-cidade{font-size:11.5px;}
+.col-postos .pc-status{font-size:11px;padding:3px 7px;}
+.col-postos .pc-totais{gap:5px;margin-top:10px;}
+.col-postos .pc-t{padding:7px 3px;border-radius:8px;}
+.col-postos .pc-t .l{font-size:9.5px;letter-spacing:.2px;}
+.col-postos .pc-t .v{font-size:16px;white-space:nowrap;}
+.col-postos .pc-t .v small{font-size:10px;}
+.col-postos .abrir{margin-top:10px;font-size:11.5px;}
+.col-postos .flag-baixo{position:static;display:inline-block;margin-bottom:6px;font-size:10px;}
+.posto-card.parc{border:2px solid #f0cf86;}
+
 /* ---------- cards de vendas (admin) ---------- */
 .cards-vendas{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
 @media(max-width:680px){.cards-vendas{grid-template-columns:1fr;}}
@@ -301,8 +358,9 @@ td input{width:110px;}
         <div><span class="eyebrow">Visão geral</span><h2>Postos da rede</h2></div>
         <input id="buscaPosto" class="busca" placeholder="Filtrar por posto ou cidade" oninput="renderAdmin()">
       </div>
-      <p class="sub" style="color:var(--texto-fraco);font-size:13px;margin:4px 0 20px;">Toque em um posto para ver o estoque completo. Postos com tanque abaixo de 20% aparecem marcados.</p>
-      <div id="gradePostos" class="grade-postos"></div>
+      <p class="sub" style="color:var(--texto-fraco);font-size:13px;margin:4px 0 8px;">Toque em um posto para ver o estoque completo. Postos com tanque abaixo de 20% aparecem marcados. A lista se atualiza sozinha a cada 2 minutos.</p>
+      <div id="filtrosAtual" class="filtros-atual"></div>
+      <div id="gradePostos" class="grade-colunas"></div>
     </div>
 
     <!-- DETALHE DE UM POSTO -->
@@ -524,13 +582,27 @@ function resumo(idVal,idSub,o){
 }
 
 /* ---------------- ADMIN: LISTA E DETALHE ---------------- */
-async function recarregarAdmin(){
-  voltarLista();
+let filtroAtual="todos";
+async function carregarDadosAdmin(){
   const { data:postos } = await sb.from("postos").select("*").eq("is_admin",false).order("nome");
   const { data:tks }    = await sb.from("tanques").select("*");
-  dadosAdmin = (postos||[]).map(p=>({ ...p, tanques:(tks||[]).filter(t=>t.posto_id===p.id) }));
+  dadosAdmin = (postos||[]).map(p=>({ ...p,
+    apelido:(p.nome||"").replace(/\s+/g," ").trim(),
+    coluna:Number(p.coluna)||null, ordem:p.ordem==null?null:Number(p.ordem),
+    tanques:(tks||[]).filter(t=>t.posto_id===p.id) }));
+}
+async function recarregarAdmin(){
+  voltarLista();
+  await carregarDadosAdmin();
   renderAdmin();
 }
+// atualização automática a cada 2 minutos, só quando a lista está na tela
+setInterval(async()=>{
+  if(!postoAtual || !postoAtual.is_admin) return;
+  if($("adminLista").classList.contains("hidden")) return;
+  await carregarDadosAdmin(); renderAdmin();
+}, 120000);
+
 function totaisPosto(p){
   const t={"Gasolina Comum":0,"Etanol":0,"Diesel S10":0};
   p.tanques.forEach(k=>{ if(t[k.combustivel]!==undefined) t[k.combustivel]+=Number(k.estoque); });
@@ -539,17 +611,45 @@ function totaisPosto(p){
 function temBaixo(p){ return p.tanques.some(t=> (t.estoque/t.capacidade)*100 <= LIMITE_BAIXO); }
 function soTexto(t){ return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
 
+// Situação da atualização de hoje: ok (todos os tanques hoje), parc (alguns), pend (nenhum), sem (sem tanques)
+function statusAtualizacao(p){
+  const tqs=p.tanques.filter(tanqueAtivo);
+  if(!tqs.length) return {tipo:"sem",txt:"Sem tanques cadastrados"};
+  const hoje=new Date().toDateString();
+  const datas=tqs.map(t=>t.atualizado_em?new Date(t.atualizado_em):null);
+  const deHoje=datas.filter(d=>d&&d.toDateString()===hoje);
+  const ult=new Date(Math.max(...datas.map(d=>d?d.getTime():0)));
+  const hora=d=>d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  if(deHoje.length===tqs.length) return {tipo:"ok",txt:"✓ Atualizado hoje às "+hora(ult)};
+  if(deHoje.length>0) return {tipo:"parc",txt:"Atualizou "+deHoje.length+" de "+tqs.length+" tanques hoje"};
+  const quando=ult.getTime()>0?(ult.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})+" às "+hora(ult)):"nunca";
+  return {tipo:"pend",txt:"✕ Não atualizou hoje · última: "+quando};
+}
+function setFiltro(f){ filtroAtual=f; renderAdmin(); }
+
 function renderAdmin(){
-  const filtro=soTexto($("buscaPosto").value);
-  const lista=dadosAdmin.filter(p=>soTexto((p.nome||"")+" "+(p.cidade||"")+" "+(p.cnpj||"")).includes(filtro));
-  if(lista.length===0){ $("gradePostos").innerHTML=`<p class="vazio">Nenhum posto encontrado.</p>`; return; }
-  let html="";
-  lista.forEach(p=>{
+  const busca=soTexto($("buscaPosto").value);
+  const todos=dadosAdmin.map(p=>({...p, st:statusAtualizacao(p)}));
+  const cont={ok:0,parc:0,pend:0,sem:0}; todos.forEach(p=>cont[p.st.tipo]++);
+  const chip=(f,cls,txt,n)=>`<button class="chip-f ${cls} ${filtroAtual===f?"ativo":""}" onclick="setFiltro('${f}')">${txt}<b>${n}</b></button>`;
+  $("filtrosAtual").innerHTML=
+    chip("todos","","Todos",todos.length)+
+    chip("ok","ok","Atualizados hoje",cont.ok)+
+    chip("parc","parc","Atualização incompleta",cont.parc)+
+    chip("pend","pend","Não atualizaram hoje",cont.pend+cont.sem);
+
+  const lista=todos.filter(p=>
+    soTexto((p.nome||"")+" "+(p.cidade||"")+" "+(p.cnpj||"")).includes(busca) &&
+    (filtroAtual==="todos" || p.st.tipo===filtroAtual || (filtroAtual==="pend" && p.st.tipo==="sem")));
+  if(lista.length===0){ $("gradePostos").innerHTML=`<p class="vazio" style="grid-column:1/-1">Nenhum posto nesta seleção.</p>`; return; }
+
+  const cartao=p=>{
     const t=totaisPosto(p);
-    html+=`<button class="posto-card" onclick="abrirPosto('${p.id}')">
+    return `<button class="posto-card ${p.st.tipo}" onclick="abrirPosto('${p.id}')">
       ${temBaixo(p)?'<span class="flag-baixo">Estoque baixo</span>':''}
       <div class="pc-nome">${p.nome}</div>
       <div class="pc-cidade">${p.cidade||"—"} · CNPJ ${p.cnpj}</div>
+      <span class="pc-status ${p.st.tipo}">${p.st.txt}</span>
       <div class="pc-totais">
         <div class="pc-t" style="--c:var(--gasolina)"><div class="l">Gasolina</div><div class="v num">${fmt(t["Gasolina Comum"])}<small> L</small></div></div>
         <div class="pc-t" style="--c:var(--etanol)"><div class="l">Etanol</div><div class="v num">${fmt(t["Etanol"])}<small> L</small></div></div>
@@ -557,8 +657,10 @@ function renderAdmin(){
       </div>
       <div class="abrir">Ver estoque completo →</div>
     </button>`;
-  });
-  $("gradePostos").innerHTML=html;
+  };
+  // 4 colunas, cada uma igual a uma coluna da planilha
+  $("gradePostos").innerHTML=gruposColunas(lista)
+    .map(col=>`<div class="col-postos">${col.map(cartao).join("")}</div>`).join("");
 }
 
 async function abrirPosto(id){
@@ -604,12 +706,14 @@ async function abrirPosto(id){
   tanquesOrdenados.forEach(k=>{
     const pct=Math.round((k.estoque/k.capacidade)*100), cor=CORES[k.combustivel]||"var(--diesel)";
     const data=k.atualizado_em?new Date(k.atualizado_em).toLocaleString("pt-BR"):"—";
+    const hojeOk=k.atualizado_em && new Date(k.atualizado_em).toDateString()===new Date().toDateString();
+    const semDiesel=!tanqueAtivo(k);
     linhas+=`<tr>
       <td><span class="pill"><span class="dot" style="background:${cor}"></span>${k.combustivel}</span></td>
       <td>${k.numero}</td><td class="num">${fmt(k.capacidade)} L</td><td class="num">${fmt(k.estoque)} L</td>
       <td><div class="num" style="font-size:14px;color:var(--texto-fraco);margin-bottom:4px;">${pct}%</div>
           <div class="barra"><div style="width:${pct}%;background:${corNivel(pct)}"></div></div></td>
-      <td style="font-size:13px;color:var(--texto-fraco);">${data}</td>
+      <td style="font-size:13px;${semDiesel?"color:var(--texto-fraco);":hojeOk?"color:#15803d;":"color:#c81e1e;font-weight:700;"}">${semDiesel?"Sem diesel (não conta) · ":hojeOk?"✓ ":"✕ "}${data}</td>
     </tr>`;
   });
   $("detTabela").innerHTML=linhas;
@@ -768,6 +872,14 @@ async function salvarOrgPlanilha(){
 }
 
 /* ---------- PLANILHA DE ESTOQUE (EXCEL) ---------- */
+// Diesel zerado (menos de 1% da capacidade) = posto sem diesel: o tanque é ignorado
+// no quadro, no resumo e na conferência de quem atualizou.
+const LIMITE_SEM_DIESEL=0.01;
+function tanqueAtivo(t){
+  if(t.combustivel!=="Diesel S10") return true;
+  const cap=Number(t.capacidade)||0, est=Number(t.estoque)||0;
+  return cap>0 ? est/cap>=LIMITE_SEM_DIESEL : est>0;
+}
 // Nome curto do posto para a planilha (tira "Auto Posto", "Benedetti", "Ltda"...)
 function apelidoPosto(nome){
   let s=(nome||"").toUpperCase();
@@ -828,7 +940,7 @@ function montarPlanilha(lista, agora){
   lista.forEach(p=>{
     p.ag={}; let minPct=1, temTanque=false;
     COMBS.forEach(c=>{
-      const lt=p.tanques.filter(x=>x.combustivel===c.nome);
+      const lt=p.tanques.filter(x=>x.combustivel===c.nome && tanqueAtivo(x));
       const e=lt.reduce((a,x)=>a+Number(x.estoque||0),0), cap=lt.reduce((a,x)=>a+Number(x.capacidade||0),0);
       p.ag[c.nome]={n:lt.length,e,c:cap,pct:cap>0?e/cap:0};
       rede[c.nome].e+=e; rede[c.nome].c+=cap;
