@@ -322,7 +322,7 @@ td input{width:110px;}
             <input id="dMot" class="full" placeholder="Nome do motorista">
             <input id="dData" type="date">
             <select id="dComb"><option>Gasolina Comum</option><option>Etanol</option><option>Diesel S10</option></select>
-            <input id="dVol" type="number" placeholder="Volume (L)">
+            <input id="dVol" type="text" inputmode="decimal" placeholder="Volume (ex.: 15.000)">
             <button onclick="cadastrarDescarga()">Adicionar descarga</button>
           </div>
           <div id="listaDescargas" class="lista-descargas"></div>
@@ -731,6 +731,19 @@ function voltarLista(){
 }
 
 /* ---------- DESCARGAS E ENVELOPES (POSTO) ---------- */
+// Lê o volume da descarga do jeito que o posto digitar: 15000, 15.000, 15.000,5, 15 ou 15,5.
+// Descarga nunca tem menos de 1.000 L: número pequeno é entendido como mil litros (15 = 15.000 L).
+function lerLitros(txt){
+  let s=String(txt||"").trim().replace(/\s/g,"").replace(/l$/i,"");
+  if(!s) return 0;
+  if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s=s.replace(/\./g,"").replace(",",".");
+  else s=s.replace(",",".");
+  let v=Number(s);
+  if(!isFinite(v)||v<0) return NaN;
+  if(v>0 && v<1000) v=v*1000;
+  return Math.round(v);
+}
+
 async function carregarDescargas(){
   const { data, error } = await sb.from("descargas").select("*").eq("posto_id",postoAtual.id)
     .order("descarregado").order("data_prevista",{ascending:false});
@@ -760,14 +773,14 @@ function renderDescargasPosto(lista){
 }
 async function cadastrarDescarga(){
   const motorista=$("dMot").value.trim(), data_prevista=$("dData").value,
-        combustivel=$("dComb").value, volume=Number($("dVol").value);
+        combustivel=$("dComb").value, volume=lerLitros($("dVol").value);
   if(!motorista) return msg($("msgPosto"),"Informe o motorista.","erro");
   if(!data_prevista) return msg($("msgPosto"),"Informe a data prevista.","erro");
-  if(!volume||volume<=0) return msg($("msgPosto"),"Informe um volume válido.","erro");
+  if(!volume||isNaN(volume)||volume<=0) return msg($("msgPosto"),"Informe um volume válido (ex.: 15.000).","erro");
   const { error } = await sb.from("descargas").insert({ posto_id:postoAtual.id, motorista, data_prevista, combustivel, volume });
   if(error) return msg($("msgPosto"), error.message, "erro");
   $("dMot").value=""; $("dData").value=""; $("dVol").value="";
-  msg($("msgPosto"),"Descarga cadastrada.","ok");
+  msg($("msgPosto"),"Descarga cadastrada: "+fmt(volume)+" L de "+combustivel+".","ok");
   carregarDescargas();
 }
 async function marcarDescarregada(id){
@@ -913,7 +926,7 @@ function dataArquivo(d){
   return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"_"+p(d.getHours())+"h"+p(d.getMinutes());
 }
 // Monta o arquivo Excel. "lista" = postos com seus tanques. Devolve o workbook.
-function montarPlanilha(lista, agora){
+function montarPlanilha(lista, agora, descargas){
   // ---- paleta Rede Benedetti ----
   const C={
     preto:"FF15171A", ouro:"FFE6B422", ouroClaro:"FFFCF3D6", branco:"FFFFFFFF",
@@ -1048,6 +1061,63 @@ function montarPlanilha(lista, agora){
     ws.mergeCells(r,2,r,ULT-1);
     ws.getCell(r,2).value="Nenhum posto cadastrado ainda."; ws.getCell(r,2).font=F({italic:true,color:{argb:C.fraco}});
   }
+  // --- DESCARGAS DO DIA (lançadas pelos postos em "Descargas previstas") ---
+  // Uma linha por motorista: MOTORISTA · COMBUSTÍVEL volume POSTO · ...
+  const mil=v=>{ v=Number(v)||0; const m=v>=1000?v/1000:v; return m.toLocaleString("pt-BR",{maximumFractionDigits:1}); };
+  const posPlan=new Map(ordenarComoPlanilha(lista).map((p,i)=>[p.id,i]));
+  const postoPorId=new Map(lista.map(p=>[p.id,p]));
+  const porMot={};
+  (descargas||[]).forEach(d=>{
+    const k=(d.motorista||"").replace(/\s+/g," ").trim().toUpperCase()||"SEM MOTORISTA";
+    (porMot[k]=porMot[k]||[]).push(d);
+  });
+  const ordemPos=d=>posPlan.has(d.posto_id)?posPlan.get(d.posto_id):9999;
+  const motoristas=Object.entries(porMot)
+    .map(([mot,ds])=>({mot,ds:ds.sort((a,b)=>ordemPos(a)-ordemPos(b))}))
+    .sort((a,b)=>ordemPos(a.ds[0])-ordemPos(b.ds[0])||a.mot.localeCompare(b.mot,"pt"));
+  r+=1;
+  ws.mergeCells(r,2,r,ULT-1);
+  const tD=ws.getCell(r,2);
+  tD.value={richText:[
+    {text:"DESCARGAS DO DIA",font:F({bold:true,size:11,color:{argb:C.preto}})},
+    {text:"   ·   "+agora.toLocaleDateString("pt-BR")+"   ·   volumes em mil litros (35 = 35.000 L)",font:F({size:9,color:{argb:C.fraco}})}]};
+  tD.alignment={vertical:"middle"}; tD.border={bottom:{style:"medium",color:{argb:C.ouro}}};
+  ws.getRow(r).height=19; r++;
+  if(!motoristas.length){
+    ws.mergeCells(r,2,r,ULT-1);
+    const v=ws.getCell(r,2);
+    v.value="Nenhuma descarga lançada pelos postos para hoje."; v.font=F({italic:true,size:10,color:{argb:C.fraco}});
+    ws.getRow(r).height=16; r++;
+  }
+  motoristas.forEach((g,idx)=>{
+    ws.mergeCells(r,2,r,ULT-1);
+    const parts=[{text:g.mot,font:F({bold:true,size:10,color:{argb:C.preto}})}];
+    g.ds.forEach(d=>{
+      const cb=COMBS.find(c=>c.nome===d.combustivel)||COMBS[2];
+      const p=postoPorId.get(d.posto_id);
+      parts.push({text:"   ·   ",font:F({size:10,color:{argb:"FFB8BDC4"}})});
+      parts.push({text:cb.curto+" ",font:F({bold:true,size:10,color:{argb:cb.cor}})});
+      parts.push({text:mil(d.volume)+" ",font:F({bold:true,size:10})});
+      parts.push({text:p?apelidoPosto(p.nome):"POSTO NÃO ENCONTRADO",font:F({size:10})});
+      if(d.descarregado) parts.push({text:" ✓",font:F({bold:true,size:10,color:{argb:C.okT}})});
+    });
+    const c=ws.getCell(r,2);
+    c.value={richText:parts};
+    c.alignment={horizontal:"left",vertical:"middle",wrapText:true,indent:1};
+    c.border={bottom:fina()};
+    if(idx%2) c.fill=fill(C.zebra);
+    // altura conforme o tamanho do texto (cerca de 105 caracteres por linha na folha)
+    const tam=parts.reduce((t,x)=>t+x.text.length,0);
+    const nLin=Math.max(1,Math.ceil(tam/105));
+    ws.getRow(r).height=nLin*14+3;
+    r++;
+  });
+  if(motoristas.some(g=>g.ds.some(d=>d.descarregado))){
+    ws.mergeCells(r,2,r,ULT-1);
+    ws.getCell(r,2).value="✓ = já marcado como descarregado pelo posto";
+    ws.getCell(r,2).font=F({italic:true,size:8,color:{argb:C.fraco}});
+    r++;
+  }
   ws.pageSetup.printArea="A1:"+ws.getColumn(ULT).letter+Math.max(r,6);
 
   // =====================================================================
@@ -1170,7 +1240,12 @@ async function gerarPlanilha(){
       coluna:Number(p.coluna)||null, ordem:p.ordem==null?null:Number(p.ordem),
       tanques:(tks||[]).filter(x=>x.posto_id===p.id) }));
     const agora=new Date();
-    const wb=montarPlanilha(lista, agora);
+    // descargas lançadas pelos postos com data prevista para hoje
+    const p2=n=>String(n).padStart(2,"0");
+    const hojeISO=agora.getFullYear()+"-"+p2(agora.getMonth()+1)+"-"+p2(agora.getDate());
+    const { data:descHoje, error:e3 } = await sb.from("descargas").select("*").eq("data_prevista",hojeISO);
+    if(e3) throw e3;
+    const wb=montarPlanilha(lista, agora, descHoje||[]);
     const buf=await wb.xlsx.writeBuffer();
     const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
     const a=document.createElement("a");
