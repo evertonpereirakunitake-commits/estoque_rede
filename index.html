@@ -102,7 +102,7 @@ td input{width:110px;}
 /* ---------- grade de postos (admin) ---------- */
 .grade-postos{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px;margin-top:8px;}
 .posto-card{background:var(--card);border:1px solid var(--linha);border-radius:16px;padding:20px;cursor:pointer;transition:.18s;position:relative;text-align:left;width:100%;color:inherit;font-family:inherit;}
-.posto-card:hover{border-color:var(--preto);transform:translateY(-2px);box-shadow:0 14px 30px -20px rgba(21,23,26,.4);}
+.posto-card:hover{background:var(--card);border-color:var(--preto);transform:translateY(-2px);box-shadow:0 14px 30px -20px rgba(21,23,26,.4);}
 .posto-card .pc-nome{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:20px;letter-spacing:.4px;line-height:1.1;}
 .posto-card .pc-cidade{font-size:12.5px;color:var(--texto-fraco);margin-top:2px;}
 .pc-totais{display:flex;gap:8px;margin-top:16px;}
@@ -211,6 +211,24 @@ td input{width:110px;}
 .env-ok b{color:var(--texto);}
 .pc-env{display:inline-block;margin:6px 0 0 6px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:#fde2e2;color:#c81e1e;}
 .chip-f.env b{color:#c81e1e;}
+/* copiar cadastro para pedido */
+.pc-copiar{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.cp-btn{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:8px;color:#fff;cursor:pointer;user-select:none;}
+.cp-btn.eta{background:var(--etanol);} .cp-btn.eta:hover{background:#128a3a;}
+.cp-btn.gas{background:var(--gasolina);} .cp-btn.gas:hover{background:#b32020;}
+.copiar-cad{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:-6px 0 20px;}
+.cp-grande{display:flex;flex-direction:column;align-items:flex-start;gap:2px;color:#fff;padding:10px 16px;font-size:14px;}
+.cp-grande small{font-size:11px;font-weight:500;opacity:.9;}
+.cp-grande.eta{background:var(--etanol);} .cp-grande.eta:hover{background:#128a3a;}
+.cp-grande.gas{background:var(--gasolina);} .cp-grande.gas:hover{background:#b32020;}
+.edit-cad{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;background:#f7f8fa;border:1px solid var(--linha);border-radius:12px;padding:12px 14px;margin:-8px 0 20px;}
+.edit-cad textarea{width:100%;font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid #cdd1d6;border-radius:9px;resize:vertical;}
+.edit-cad label.campo{margin:0 0 4px;}
+@media(max-width:760px){.edit-cad{grid-template-columns:1fr;}}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--preto);color:#fff;padding:12px 18px;border-radius:12px;
+  font-size:14px;font-weight:600;box-shadow:0 14px 30px -12px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.2s;z-index:50;max-width:90vw;text-align:center;}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.ok{border-left:6px solid var(--etanol);} #toast.erro{border-left:6px solid var(--gasolina);}
 
 /* ---------- posição na planilha (admin) ---------- */
 .org-planilha{display:grid;grid-template-columns:170px 120px auto 1fr;gap:10px;align-items:end;
@@ -383,6 +401,16 @@ td input{width:110px;}
         <div><label class="campo">Posição</label><input id="orgOrdem" type="number" min="1" placeholder="Ex.: 3"></div>
         <div><button class="ouro" onclick="salvarOrgPlanilha()">Salvar</button></div>
         <div style="font-size:12px;color:#7a5c07;align-self:center;">Coluna 1 a 4 e posição dentro da coluna (1 = primeiro). "Automática" coloca o posto no fim da coluna mais curta.</div>
+      </div>
+      <div class="copiar-cad">
+        <button class="cp-grande eta" onclick="copiarCadastro(postoAbertoId,'etanol')">⧉ Copiar cadastro ETANOL <small>com inscrição estadual</small></button>
+        <button class="cp-grande gas" onclick="copiarCadastro(postoAbertoId,'gas')">⧉ Copiar cadastro GASOLINA / DIESEL <small>sem inscrição estadual</small></button>
+        <button class="link" onclick="$('editCad').classList.toggle('hidden')">Editar cadastros</button>
+      </div>
+      <div id="editCad" class="edit-cad hidden">
+        <div><label class="campo">Cadastro etanol (com IE)</label><textarea id="cadEtanolTxt" rows="4"></textarea></div>
+        <div><label class="campo">Cadastro gasolina / diesel (sem IE)</label><textarea id="cadGasTxt" rows="4"></textarea></div>
+        <div><button class="ouro" onclick="salvarCadastros()">Salvar cadastros</button></div>
       </div>
       <div id="detCards" class="cards-comb"></div>
 
@@ -684,6 +712,10 @@ function renderAdmin(){
         <div class="pc-t" style="--c:var(--etanol)"><div class="l">Etanol</div><div class="v num">${fmt(t["Etanol"])}<small> L</small></div></div>
         <div class="pc-t" style="--c:var(--diesel)"><div class="l">Diesel</div><div class="v num">${fmt(t["Diesel S10"])}<small> L</small></div></div>
       </div>
+      <div class="pc-copiar">
+        <span class="cp-btn eta" role="button" title="Copiar cadastro com inscrição estadual (pedido de etanol)" onclick="copiarCadastro('${p.id}','etanol',event)">⧉ Etanol</span>
+        <span class="cp-btn gas" role="button" title="Copiar cadastro sem inscrição estadual (pedido de gasolina e diesel)" onclick="copiarCadastro('${p.id}','gas',event)">⧉ Gasolina/Diesel</span>
+      </div>
       <div class="abrir">Ver estoque completo →</div>
     </button>`;
   };
@@ -699,6 +731,9 @@ async function abrirPosto(id){
   postoAbertoId=p.id;
   $("orgColuna").value=p.coluna?String(p.coluna):"";
   $("orgOrdem").value=p.ordem??"";
+  $("cadEtanolTxt").value=p.cad_etanol||"";
+  $("cadGasTxt").value=p.cad_gasdiesel||"";
+  $("editCad").classList.add("hidden");
 
   const t=totaisPosto(p);
   const capT={"Gasolina Comum":0,"Etanol":0,"Diesel S10":0};
@@ -907,6 +942,41 @@ async function baixarDescargaAdmin(id, postoId){
   const { error } = await sb.from("descargas").delete().eq("id",id);
   if(error){ alert("Erro: "+error.message); return; }
   carregarDetalheExtra(postoId);
+}
+
+/* ---------- COPIAR CADASTRO PARA PEDIDO ---------- */
+let toastTimer=null;
+function toast(txt,tipo){
+  const t=$("toast"); t.textContent=txt; t.className="on "+(tipo||"ok");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>{ t.className=""; },2600);
+}
+async function copiarTexto(txt){
+  try{ await navigator.clipboard.writeText(txt); return true; }
+  catch(e){
+    const t=document.createElement("textarea");
+    t.value=txt; t.style.position="fixed"; t.style.opacity="0";
+    document.body.appendChild(t); t.select();
+    let ok=false; try{ ok=document.execCommand("copy"); }catch(_){}
+    t.remove(); return ok;
+  }
+}
+async function copiarCadastro(postoId, tipo, ev){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  const p=dadosAdmin.find(x=>x.id===postoId); if(!p) return;
+  const nomeTipo=tipo==="etanol"?"ETANOL (com IE)":"GASOLINA / DIESEL (sem IE)";
+  const txt=tipo==="etanol"?p.cad_etanol:p.cad_gasdiesel;
+  if(!txt) return toast("Este posto ainda não tem cadastro de "+nomeTipo+". Abra o posto e use \"Editar cadastros\".","erro");
+  const ok=await copiarTexto(txt);
+  toast(ok?("Copiado: cadastro "+nomeTipo+" · "+p.nome):"Não foi possível copiar. Abra o posto e copie em \"Editar cadastros\".", ok?"ok":"erro");
+}
+async function salvarCadastros(){
+  const p=dadosAdmin.find(x=>x.id===postoAbertoId); if(!p) return;
+  const cad_etanol=$("cadEtanolTxt").value.trim()||null, cad_gasdiesel=$("cadGasTxt").value.trim()||null;
+  const { error } = await sb.from("postos").update({ cad_etanol, cad_gasdiesel }).eq("id",p.id);
+  if(error) return toast("Não foi possível salvar: "+error.message,"erro");
+  Object.assign(p,{cad_etanol,cad_gasdiesel});
+  $("editCad").classList.add("hidden");
+  toast("Cadastros salvos.","ok");
 }
 
 async function salvarOrgPlanilha(){
@@ -1300,5 +1370,6 @@ async function gerarPlanilha(){
 /* ---------------- INÍCIO ---------------- */
 iniciarSessao();
 </script>
+<div id="toast"></div>
 </body>
 </html>
