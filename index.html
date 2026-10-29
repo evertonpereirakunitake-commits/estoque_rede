@@ -206,6 +206,11 @@ td input{width:110px;}
 .env-chip button{background:none;color:#a06d0a;padding:0;font-size:15px;line-height:1;border:0;cursor:pointer;font-weight:700;}
 .env-chip button:hover{color:#7a5c07;}
 .env-vazio{color:var(--texto-fraco);font-size:13px;padding:10px 0;}
+.env-alerta{background:#fde2e2;color:#c81e1e;border:1px solid #f5b5b5;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;margin:6px 0 4px;}
+.env-ok{color:var(--texto-fraco);font-size:12.5px;font-weight:600;margin:6px 0 2px;}
+.env-ok b{color:var(--texto);}
+.pc-env{display:inline-block;margin:6px 0 0 6px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:#fde2e2;color:#c81e1e;}
+.chip-f.env b{color:#c81e1e;}
 
 /* ---------- posição na planilha (admin) ---------- */
 .org-planilha{display:grid;grid-template-columns:170px 120px auto 1fr;gap:10px;align-items:end;
@@ -334,6 +339,7 @@ td input{width:110px;}
             <input id="eNum" class="full" placeholder="Número do envelope">
             <button class="full" onclick="cadastrarEnvelope()">Adicionar envelope</button>
           </div>
+          <div id="avisoEnvPosto"></div>
           <div id="listaEnvelopes" class="envelopes-lista"></div>
         </div>
       </div>
@@ -399,6 +405,7 @@ td input{width:110px;}
         <div>
           <div class="bloco-tit"><h3>Envelopes de amostra</h3>
             <span style="font-size:12px;color:var(--texto-fraco);">Clique no × para dar baixa</span></div>
+          <div id="avisoEnvDet"></div>
           <div id="detEnvelopes" class="envelopes-lista"></div>
         </div>
       </div>
@@ -583,10 +590,30 @@ function resumo(idVal,idSub,o){
 
 /* ---------------- ADMIN: LISTA E DETALHE ---------------- */
 let filtroAtual="todos";
+// Envelopes de amostra: abaixo de 20 aparece o aviso para repor até passar de 30.
+const ENV_MINIMO=20, ENV_META=30;
+function avisoEnvelopes(n){
+  if(n<ENV_MINIMO) return `<div class="env-alerta">⚠ Só ${n} ${n===1?"envelope":"envelopes"} cadastrados. Precisa repor para ficar acima de ${ENV_META}.</div>`;
+  return `<div class="env-ok"><b>${n}</b> envelopes cadastrados · do mais antigo para o mais novo</div>`;
+}
+// Busca todas as linhas de uma tabela (o servidor entrega no máximo 1000 por vez)
+async function buscarTodos(tabela, colunas){
+  let tudo=[], de=0; const passo=1000;
+  while(true){
+    const { data, error } = await sb.from(tabela).select(colunas).range(de, de+passo-1);
+    if(error||!data) break;
+    tudo=tudo.concat(data);
+    if(data.length<passo) break;
+    de+=passo;
+  }
+  return tudo;
+}
 async function carregarDadosAdmin(){
   const { data:postos } = await sb.from("postos").select("*").eq("is_admin",false).order("nome");
-  const { data:tks }    = await sb.from("tanques").select("*");
-  dadosAdmin = (postos||[]).map(p=>({ ...p,
+  const tks = await buscarTodos("tanques","*");
+  const envs = await buscarTodos("envelopes","posto_id");
+  const qtdEnv={}; envs.forEach(e=>{ qtdEnv[e.posto_id]=(qtdEnv[e.posto_id]||0)+1; });
+  dadosAdmin = (postos||[]).map(p=>({ ...p, qtdEnv:qtdEnv[p.id]||0,
     apelido:(p.nome||"").replace(/\s+/g," ").trim(),
     coluna:Number(p.coluna)||null, ordem:p.ordem==null?null:Number(p.ordem),
     tanques:(tks||[]).filter(t=>t.posto_id===p.id) }));
@@ -636,11 +663,13 @@ function renderAdmin(){
     chip("todos","","Todos",todos.length)+
     chip("ok","ok","Atualizados hoje",cont.ok)+
     chip("parc","parc","Atualização incompleta",cont.parc)+
-    chip("pend","pend","Não atualizaram hoje",cont.pend+cont.sem);
+    chip("pend","pend","Não atualizaram hoje",cont.pend+cont.sem)+
+    chip("env","env","Envelopes abaixo de "+ENV_MINIMO,todos.filter(p=>p.qtdEnv<ENV_MINIMO).length);
 
   const lista=todos.filter(p=>
     soTexto((p.nome||"")+" "+(p.cidade||"")+" "+(p.cnpj||"")).includes(busca) &&
-    (filtroAtual==="todos" || p.st.tipo===filtroAtual || (filtroAtual==="pend" && p.st.tipo==="sem")));
+    (filtroAtual==="todos" || p.st.tipo===filtroAtual || (filtroAtual==="pend" && p.st.tipo==="sem") ||
+     (filtroAtual==="env" && p.qtdEnv<ENV_MINIMO)));
   if(lista.length===0){ $("gradePostos").innerHTML=`<p class="vazio" style="grid-column:1/-1">Nenhum posto nesta seleção.</p>`; return; }
 
   const cartao=p=>{
@@ -649,7 +678,7 @@ function renderAdmin(){
       ${temBaixo(p)?'<span class="flag-baixo">Estoque baixo</span>':''}
       <div class="pc-nome">${p.nome}</div>
       <div class="pc-cidade">${p.cidade||"—"} · CNPJ ${p.cnpj}</div>
-      <span class="pc-status ${p.st.tipo}">${p.st.txt}</span>
+      <span class="pc-status ${p.st.tipo}">${p.st.txt}</span>${p.qtdEnv<ENV_MINIMO?`<span class="pc-env" title="Repor para ficar acima de ${ENV_META}">⚠ Envelopes: ${p.qtdEnv}</span>`:""}
       <div class="pc-totais">
         <div class="pc-t" style="--c:var(--gasolina)"><div class="l">Gasolina</div><div class="v num">${fmt(t["Gasolina Comum"])}<small> L</small></div></div>
         <div class="pc-t" style="--c:var(--etanol)"><div class="l">Etanol</div><div class="v num">${fmt(t["Etanol"])}<small> L</small></div></div>
@@ -798,15 +827,18 @@ async function removerDescarga(id){
 }
 
 async function carregarEnvelopes(){
-  const { data, error } = await sb.from("envelopes").select("*").eq("posto_id",postoAtual.id).order("numero");
+  const { data, error } = await sb.from("envelopes").select("*").eq("posto_id",postoAtual.id)
+    .order("criado_em",{ascending:true}).order("numero",{ascending:true});
   if(error) return;
   renderEnvelopesPosto(data||[]);
 }
 function renderEnvelopesPosto(lista){
+  $("avisoEnvPosto").innerHTML=avisoEnvelopes(lista.length);
   if(lista.length===0){ $("listaEnvelopes").innerHTML=`<div class="env-vazio">Nenhum envelope cadastrado.</div>`; return; }
   let html="";
   lista.forEach(e=>{
-    html+=`<span class="env-chip">${e.numero}<button title="Remover" onclick="removerEnvelope('${e.id}')">×</button></span>`;
+    const quando=e.criado_em?new Date(e.criado_em).toLocaleDateString("pt-BR"):"";
+    html+=`<span class="env-chip" title="Cadastrado em ${quando}">${e.numero}<button title="Remover" onclick="removerEnvelope('${e.id}')">×</button></span>`;
   });
   $("listaEnvelopes").innerHTML=html;
 }
@@ -830,7 +862,11 @@ async function removerEnvelope(id){
 /* ---------- DESCARGAS E ENVELOPES (ADMIN) ---------- */
 async function carregarDetalheExtra(postoId){
   const { data:desc }= await sb.from("descargas").select("*").eq("posto_id",postoId).order("descarregado").order("data_prevista",{ascending:false});
-  const { data:env } = await sb.from("envelopes").select("*").eq("posto_id",postoId).order("numero");
+  const { data:env } = await sb.from("envelopes").select("*").eq("posto_id",postoId)
+    .order("criado_em",{ascending:true}).order("numero",{ascending:true});
+  const qtd=(env||[]).length;
+  $("avisoEnvDet").innerHTML=avisoEnvelopes(qtd);
+  const pp=dadosAdmin.find(x=>x.id===postoId); if(pp) pp.qtdEnv=qtd;
 
   if(!desc || desc.length===0) $("detDescargas").innerHTML=`<div class="env-vazio">Nenhuma descarga cadastrada.</div>`;
   else {
@@ -854,7 +890,8 @@ async function carregarDetalheExtra(postoId){
   else {
     let html="";
     env.forEach(e=>{
-      html+=`<span class="env-chip">${e.numero}<button title="Dar baixa" onclick="baixarEnvelopeAdmin('${e.id}','${postoId}')">×</button></span>`;
+      const quando=e.criado_em?new Date(e.criado_em).toLocaleDateString("pt-BR"):"";
+      html+=`<span class="env-chip" title="Cadastrado em ${quando}">${e.numero}<button title="Dar baixa" onclick="baixarEnvelopeAdmin('${e.id}','${postoId}')">×</button></span>`;
     });
     $("detEnvelopes").innerHTML=html;
   }
