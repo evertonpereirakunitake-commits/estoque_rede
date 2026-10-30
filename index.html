@@ -213,6 +213,19 @@ td input{width:110px;}
 .chip-f.env b{color:#c81e1e;}
 /* copiar cadastro para pedido */
 .pc-copiar{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+/* preços na bomba */
+.pc-precos{display:flex;gap:6px;margin-top:6px;}
+.pc-pr{flex:1;text-align:center;border-radius:8px;padding:4px 2px;background:#fafbfc;border:1px solid var(--linha);border-bottom:3px solid var(--c);}
+.pc-pr .l{font-size:9px;text-transform:uppercase;letter-spacing:.3px;color:var(--texto-fraco);font-weight:700;}
+.pc-pr .v{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:15px;color:var(--texto);white-space:nowrap;}
+.pc-pr .v.sem{color:#b8bdc4;}
+.pc-pr-data{font-size:10.5px;color:var(--texto-fraco);margin-top:3px;}
+.precos-posto{margin-top:24px;border:1px solid var(--linha);border-radius:14px;padding:16px 18px;background:#fbfcfd;}
+.precos-posto .grade{display:grid;grid-template-columns:repeat(3,1fr) auto;gap:12px;align-items:end;margin-top:10px;}
+.precos-posto .campo-preco{border-left:5px solid var(--c);padding-left:10px;}
+.precos-posto input{font-family:"Barlow Condensed",sans-serif;font-size:20px;font-weight:700;}
+.precos-posto .info{font-size:12.5px;color:var(--texto-fraco);margin-top:8px;}
+@media(max-width:700px){.precos-posto .grade{grid-template-columns:1fr 1fr;}}
 .cp-btn{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:8px;color:#fff;cursor:pointer;user-select:none;}
 .cp-btn.eta{background:var(--etanol);} .cp-btn.eta:hover{background:#128a3a;}
 .cp-btn.gas{background:var(--gasolina);} .cp-btn.gas:hover{background:#b32020;}
@@ -335,6 +348,17 @@ td input{width:110px;}
         <div class="cc" style="--c:var(--gasolina)"><div class="rotulo"><span class="dot" style="background:var(--gasolina)"></span>Gasolina Comum</div><div class="valor num" id="gas">0 <small>L</small></div><div class="meta" id="gasSub">—</div></div>
         <div class="cc" style="--c:var(--etanol)"><div class="rotulo"><span class="dot" style="background:var(--etanol)"></span>Etanol</div><div class="valor num" id="eta">0 <small>L</small></div><div class="meta" id="etaSub">—</div></div>
         <div class="cc" style="--c:var(--diesel)"><div class="rotulo"><span class="dot" style="background:var(--diesel)"></span>Diesel S10</div><div class="valor num" id="die">0 <small>L</small></div><div class="meta" id="dieSub">—</div></div>
+      </div>
+
+      <div class="precos-posto">
+        <div class="bloco-tit"><h3>Preços na bomba</h3></div>
+        <div class="grade">
+          <div class="campo-preco" style="--c:var(--gasolina)"><label class="campo">Gasolina (R$/L)</label><input id="prGas" type="text" inputmode="decimal" placeholder="0,00"></div>
+          <div class="campo-preco" style="--c:var(--etanol)"><label class="campo">Etanol (R$/L)</label><input id="prEta" type="text" inputmode="decimal" placeholder="0,00"></div>
+          <div class="campo-preco" style="--c:var(--diesel)"><label class="campo">Diesel S10 (R$/L)</label><input id="prDie" type="text" inputmode="decimal" placeholder="0,00"></div>
+          <div><button class="ouro" onclick="salvarPrecos()">Salvar preços</button></div>
+        </div>
+        <div class="info" id="prInfo">Deixe em branco o combustível que o posto não vende.</div>
       </div>
 
       <div class="blocos-extra">
@@ -544,7 +568,7 @@ async function iniciarSessao(){
   else {
     $("postoNome").textContent = perfil.nome;
     $("postoCnpj").textContent = perfil.cnpj;
-    mostrarTela("Posto"); carregarTanques(); carregarDescargas(); carregarEnvelopes();
+    mostrarTela("Posto"); carregarTanques(); carregarDescargas(); carregarEnvelopes(); mostrarPrecosPosto();
   }
 }
 function mostrarTela(qual){ ["Auth","Posto","Admin"].forEach(t=>$("tela"+t).classList.toggle("hidden", t!==qual)); }
@@ -712,6 +736,11 @@ function renderAdmin(){
         <div class="pc-t" style="--c:var(--etanol)"><div class="l">Etanol</div><div class="v num">${fmt(t["Etanol"])}<small> L</small></div></div>
         <div class="pc-t" style="--c:var(--diesel)"><div class="l">Diesel</div><div class="v num">${fmt(t["Diesel S10"])}<small> L</small></div></div>
       </div>
+      <div class="pc-precos">
+        ${[["Gasolina","preco_gasolina","var(--gasolina)"],["Etanol","preco_etanol","var(--etanol)"],["Diesel","preco_diesel","var(--diesel)"]].map(([l,k,c])=>
+          `<div class="pc-pr" style="--c:${c}"><div class="l">${l}</div><div class="v ${p[k]==null?"sem":""}">${p[k]==null?"—":"R$ "+fmtPreco(p[k])}</div></div>`).join("")}
+      </div>
+      <div class="pc-pr-data">${p.preco_atualizado_em?"Preços de "+new Date(p.preco_atualizado_em).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}):"Preços não informados"}</div>
       <div class="pc-copiar">
         <span class="cp-btn eta" role="button" title="Copiar cadastro com inscrição estadual (pedido de etanol)" onclick="copiarCadastro('${p.id}','etanol',event)">⧉ Etanol</span>
         <span class="cp-btn gas" role="button" title="Copiar cadastro sem inscrição estadual (pedido de gasolina e diesel)" onclick="copiarCadastro('${p.id}','gas',event)">⧉ Gasolina/Diesel</span>
@@ -792,6 +821,35 @@ async function abrirPosto(id){
 function voltarLista(){
   $("adminDetalhe").classList.add("hidden");
   $("adminLista").classList.remove("hidden");
+}
+
+/* ---------- PREÇOS NA BOMBA ---------- */
+// Lê "5,99", "5.99", "5,999" ou "R$ 5,99". Vazio = não vende.
+function lerPreco(txt){
+  let s=String(txt||"").trim().replace(/r\$|\s/gi,"");
+  if(!s) return null;
+  s=s.replace(",",".");
+  const v=Number(s);
+  return isFinite(v)&&v>0&&v<100 ? Math.round(v*1000)/1000 : NaN;
+}
+const fmtPreco=v=>v==null?"":Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:3});
+function mostrarPrecosPosto(){
+  const p=postoAtual;
+  $("prGas").value=fmtPreco(p.preco_gasolina);
+  $("prEta").value=fmtPreco(p.preco_etanol);
+  $("prDie").value=fmtPreco(p.preco_diesel);
+  $("prInfo").textContent=p.preco_atualizado_em
+    ? "Última atualização: "+new Date(p.preco_atualizado_em).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})+". Deixe em branco o combustível que o posto não vende."
+    : "Ainda não informado. Deixe em branco o combustível que o posto não vende.";
+}
+async function salvarPrecos(){
+  const g=lerPreco($("prGas").value), e=lerPreco($("prEta").value), d=lerPreco($("prDie").value);
+  if([g,e,d].some(v=>Number.isNaN(v))) return msg($("msgPosto"),"Preço inválido. Use o formato 5,99.","erro");
+  const dados={ preco_gasolina:g, preco_etanol:e, preco_diesel:d, preco_atualizado_em:new Date().toISOString() };
+  const { error } = await sb.from("postos").update(dados).eq("id",postoAtual.id);
+  if(error) return msg($("msgPosto"),"Não foi possível salvar os preços: "+error.message,"erro");
+  Object.assign(postoAtual,dados); mostrarPrecosPosto();
+  msg($("msgPosto"),"Preços salvos.","ok");
 }
 
 /* ---------- DESCARGAS E ENVELOPES (POSTO) ---------- */
