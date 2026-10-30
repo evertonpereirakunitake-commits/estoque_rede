@@ -950,15 +950,30 @@ function toast(txt,tipo){
   const t=$("toast"); t.textContent=txt; t.className="on "+(tipo||"ok");
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>{ t.className=""; },2600);
 }
+// Copia o cadastro no formato do Excel: uma tabela (HTML) com 1 linha por célula.
+// O Excel cola cada linha numa célula inteira, sem cortar nos espaços,
+// mesmo se alguém tiver usado "Texto para Colunas".
 async function copiarTexto(txt){
-  try{ await navigator.clipboard.writeText(txt); return true; }
-  catch(e){
-    const t=document.createElement("textarea");
-    t.value=txt; t.style.position="fixed"; t.style.opacity="0";
-    document.body.appendChild(t); t.select();
-    let ok=false; try{ ok=document.execCommand("copy"); }catch(_){}
-    t.remove(); return ok;
-  }
+  const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const html='<meta charset="utf-8"><table style="border-collapse:collapse">'+
+    txt.split("\n").map(l=>`<tr><td style='mso-number-format:"\\@";font-family:Arial;font-size:10pt;white-space:nowrap'>${esc(l)}</td></tr>`).join("")+
+    '</table>';
+  try{
+    if(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write){
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/html": new Blob([html],{type:"text/html"}) })]);
+      return true;
+    }
+  }catch(e){}
+  // navegador sem suporte: copia a tabela selecionando-a na página
+  const div=document.createElement("div");
+  div.innerHTML=html; div.style.position="fixed"; div.style.left="-9999px";
+  document.body.appendChild(div);
+  const r=document.createRange(); r.selectNodeContents(div);
+  const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  let ok=false; try{ ok=document.execCommand("copy"); }catch(_){}
+  sel.removeAllRanges(); div.remove();
+  return ok;
 }
 async function copiarCadastro(postoId, tipo, ev){
   if(ev){ ev.stopPropagation(); ev.preventDefault(); }
